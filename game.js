@@ -24,7 +24,7 @@ const SPOTS = [
     ],
   },
   {
-    id: "sea", emoji: "🌊", name: "바다", unlockCost: 1000,
+    id: "sea", emoji: "🌊", name: "바다", unlockCost: 100000,
     fish: [
       { id: "mackerel", emoji: "🐟", name: "고등어",   rarity: "common",    price: 8 },
       { id: "crab",     emoji: "🦀", name: "대게",     rarity: "uncommon",  price: 25 },
@@ -33,7 +33,7 @@ const SPOTS = [
     ],
   },
   {
-    id: "deep", emoji: "🌌", name: "심해", unlockCost: 50000,
+    id: "deep", emoji: "🌌", name: "심해", unlockCost: 20000000,
     fish: [
       { id: "shrimp",   emoji: "🦐", name: "심해 새우", rarity: "common",    price: 60 },
       { id: "angler",   emoji: "🐡", name: "아귀",      rarity: "uncommon",  price: 180 },
@@ -45,10 +45,11 @@ const SPOTS = [
 
 // 업그레이드
 //    baseCost: 처음 가격 / growth: 살 때마다 가격이 몇 배가 되는지
+//    (밸런스: 가상 플레이어 시뮬레이션 기준 바다 약 15분, 심해 약 2시간에 열리도록 맞춘 값)
 const UPGRADES = [
-  { id: "bait", emoji: "🪱", name: "미끼",   desc: "물고기 가격 +50%",        baseCost: 5,  growth: 1.15 },
-  { id: "rod",  emoji: "🎣", name: "낚싯대", desc: "낚시 속도 +20%",          baseCost: 10, growth: 1.15 },
-  { id: "crew", emoji: "🧑‍✈️", name: "선원",   desc: "한 번에 잡는 물고기 +1", baseCost: 50, growth: 1.6  },
+  { id: "bait", emoji: "🪱", name: "미끼",   desc: "물고기 가격 +50%",        baseCost: 10,  growth: 1.4 },
+  { id: "rod",  emoji: "🎣", name: "낚싯대", desc: "낚시 속도 +20%",          baseCost: 15,  growth: 1.4 },
+  { id: "crew", emoji: "🧑‍✈️", name: "선원",   desc: "한 번에 잡는 물고기 +1", baseCost: 100, growth: 2.5 },
 ];
 
 // 모든 물고기를 한 줄로 펼친 목록 (도감에서 써요)
@@ -192,9 +193,23 @@ function getGoldPerSecond() {
 }
 
 // 업그레이드 가격 = 처음 가격 × (growth의 레벨 제곱)
-function getCost(upgrade) {
-  const level = state.levels[upgrade.id];
+// level을 주면 그 레벨일 때 가격, 안 주면 지금 레벨의 가격을 알려줘요.
+function getCost(upgrade, level = state.levels[upgrade.id]) {
   return Math.floor(upgrade.baseCost * Math.pow(upgrade.growth, level));
+}
+
+// 지금 가진 골드로 이 업그레이드를 몇 레벨까지 올릴 수 있는지 미리 세어봐요.
+// 진짜로 사지는 않고, "가상의 지갑"으로 계산만 해요.
+function getMaxBuyCount(upgrade) {
+  let wallet = state.gold;
+  let level = state.levels[upgrade.id];
+  let count = 0;
+  while (wallet >= getCost(upgrade, level)) {
+    wallet -= getCost(upgrade, level);
+    level += 1;
+    count += 1;
+  }
+  return count;
 }
 
 // ============================================================
@@ -250,8 +265,26 @@ function showBanner(text, type) {
 }
 
 // 숫자를 1,234,567처럼 쉼표를 넣어 보여줘요
+// 1만이 넘으면 "12.3만", "2,000만", "4.5억"처럼 한국식 단위로 줄여요.
+// 방치형 게임은 숫자가 금방 엄청 커져서, 그대로 쓰면 버튼에 안 들어가요.
 function formatNumber(n) {
-  return Math.floor(n).toLocaleString("ko-KR");
+  n = Math.floor(n);
+  const units = [
+    { value: 1e12, name: "조" },
+    { value: 1e8,  name: "억" },
+    { value: 1e4,  name: "만" },
+  ];
+  for (const unit of units) {
+    if (n >= unit.value) {
+      const short = n / unit.value;
+      // 100 미만이면 소수점 한 자리(12.3만), 그 이상이면 정수(2,000만)
+      const text = short < 100
+        ? String(Math.floor(short * 10) / 10)
+        : Math.floor(short).toLocaleString("ko-KR");
+      return text + unit.name;
+    }
+  }
+  return n.toLocaleString("ko-KR");
 }
 
 // 초를 "3시간 12분" 같은 글자로 바꿔요
@@ -384,6 +417,52 @@ function buyUpgrade(upgrade) {
   render();
 }
 
+// 이 업그레이드 하나를 살 수 있는 만큼 전부 올려요
+function buyUpgradeMax(upgrade) {
+  let count = 0;
+  while (state.gold >= getCost(upgrade)) {
+    state.gold -= getCost(upgrade);
+    state.levels[upgrade.id] += 1;
+    count += 1;
+  }
+  if (count > 0) {
+    logText.textContent = `${upgrade.emoji} ${upgrade.name} ${count}레벨 업! (Lv.${state.levels[upgrade.id]})`;
+    logText.style.color = "";
+  }
+  render();
+}
+
+// 모든 업그레이드를 골드가 떨어질 때까지 올려요.
+// 방법: "지금 제일 싼 업그레이드"를 하나 사는 걸 반복해요.
+// 이렇게 매 순간 눈앞의 제일 좋아 보이는 선택을 하는 방식을 "탐욕 알고리즘(greedy)"이라고 불러요.
+// (밸런스 시뮬레이션의 가상 플레이어도 똑같은 방식으로 업그레이드를 사요)
+function buyAllMax() {
+  const bought = {};   // { bait: 3, rod: 2 } 처럼 몇 번씩 샀는지 기록
+  while (true) {
+    let cheapest = UPGRADES[0];
+    for (const upgrade of UPGRADES) {
+      if (getCost(upgrade) < getCost(cheapest)) {
+        cheapest = upgrade;
+      }
+    }
+    if (state.gold < getCost(cheapest)) {
+      break;   // 제일 싼 것도 못 사면 끝
+    }
+    state.gold -= getCost(cheapest);
+    state.levels[cheapest.id] += 1;
+    bought[cheapest.id] = (bought[cheapest.id] || 0) + 1;
+  }
+
+  const parts = UPGRADES
+    .filter((upgrade) => bought[upgrade.id])
+    .map((upgrade) => `${upgrade.emoji}+${bought[upgrade.id]}`);
+  if (parts.length > 0) {
+    logText.textContent = `⚡ 전부 올렸어요! ${parts.join("  ")}`;
+    logText.style.color = "";
+  }
+  render();
+}
+
 function clickSpot(spot) {
   if (state.unlockedSpots.includes(spot.id)) {
     // 이미 열린 낚시터 → 그곳으로 이동
@@ -426,10 +505,22 @@ for (const upgrade of UPGRADES) {
   desc.textContent = upgrade.desc;
   const cost = makeSpan("cost");
   button.append(name, desc, cost);
-  button.addEventListener("click", () => buyUpgrade(upgrade));
-  document.getElementById("shop").appendChild(button);
-  shopButtons[upgrade.id] = { button, name, cost };
+  button.addEventListener("click", () => buyUpgrade(upgrade));   // 1레벨 사기
+
+  // 오른쪽 작은 버튼: 살 수 있는 만큼 전부 사기
+  const maxButton = document.createElement("button");
+  maxButton.className = "max-button";
+  maxButton.addEventListener("click", () => buyUpgradeMax(upgrade));
+
+  // 두 버튼을 한 줄(row)로 묶어서 상점에 붙여요
+  const row = document.createElement("div");
+  row.className = "upgrade-row";
+  row.append(button, maxButton);
+  document.getElementById("shop").appendChild(row);
+  shopButtons[upgrade.id] = { button, name, cost, maxButton };
 }
+
+document.getElementById("buy-all").addEventListener("click", buyAllMax);
 
 // 낚시터
 const spotButtons = {};
@@ -480,7 +571,14 @@ function render() {
     ui.name.textContent = `${upgrade.emoji} ${upgrade.name} Lv.${state.levels[upgrade.id]}`;
     ui.cost.textContent = `💰 ${formatNumber(cost)}`;
     ui.button.disabled = state.gold < cost;   // 돈이 모자라면 버튼을 회색으로 잠가요
+
+    const maxCount = getMaxBuyCount(upgrade);
+    ui.maxButton.textContent = `MAX\n+${maxCount}`;
+    ui.maxButton.disabled = maxCount === 0;
   }
+  // 제일 싼 업그레이드도 못 사면 "전부 올리기"도 잠가요
+  const cheapestCost = Math.min(...UPGRADES.map((upgrade) => getCost(upgrade)));
+  document.getElementById("buy-all").disabled = state.gold < cheapestCost;
 
   // 낚시터
   for (const spot of SPOTS) {
@@ -490,7 +588,7 @@ function render() {
       button.textContent = `${spot.emoji} ${spot.name}`;
       button.disabled = false;
     } else {
-      button.textContent = `🔒 ${spot.name} 💰${formatNumber(spot.unlockCost)}`;
+      button.textContent = `🔒 ${spot.name}\n💰${formatNumber(spot.unlockCost)}`;   // \n = 줄바꿈
       button.disabled = state.gold < spot.unlockCost;
     }
     button.classList.toggle("active", spot.id === state.spot);   // 지금 있는 곳은 강조

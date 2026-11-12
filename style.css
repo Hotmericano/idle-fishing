@@ -227,6 +227,7 @@ body[data-spot="deep"] .scene { background: linear-gradient(#2a2f55 65%, #0b1030
   border-radius: 10px;
   background: #f3f9ff;
   font-size: 13px;
+  white-space: pre-line;   /* 글자 속 줄바꿈(\n)을 그대로 보여줘요 */
   cursor: pointer;
 }
 
@@ -309,6 +310,65 @@ h2 {
   font-size: 18px;
   margin: 24px 0 8px;
   text-align: left;
+}
+
+/* 상점 제목 줄: 왼쪽 제목, 오른쪽 "전부 최대로" 버튼 */
+.shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 24px 0 8px;
+}
+
+.shop-header h2 {
+  margin: 0;
+}
+
+#buy-all {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: #ffb300;
+  color: #4a2c00;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#buy-all:disabled {
+  background: #e5e5e5;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+/* 업그레이드 한 줄: [ 1레벨 사기 버튼 ][ MAX ] */
+.upgrade-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.upgrade-row .upgrade {
+  margin-bottom: 0;   /* 줄 간격은 바깥 row가 맡아요 */
+}
+
+.max-button {
+  width: 56px;
+  flex-shrink: 0;           /* 공간이 좁아도 줄어들지 않게 */
+  border: 2px solid #ffb300;
+  border-radius: 10px;
+  background: #fff6dc;
+  color: #7a5200;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: pre-line;    /* 글자 속 줄바꿈(\n)을 그대로 보여줘요 */
+  cursor: pointer;
+}
+
+.max-button:disabled {
+  border-color: #ccc;
+  background: #f5f5f5;
+  color: #bbb;
+  cursor: not-allowed;
 }
 
 /* 업그레이드 버튼 하나 */
