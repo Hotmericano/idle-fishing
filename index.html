@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>방치 낚시</title>
   <!-- 꾸미기(디자인)는 style.css 파일에 따로 적어요 -->
   <link rel="stylesheet" href="style.css">
@@ -14,6 +15,7 @@
     <div class="stats">
       <p>💰 골드: <span id="gold">0</span></p>
       <p>🐟 잡은 물고기: <span id="fish-count">0</span>마리</p>
+      <p class="small">⏱️ 초당 골드: <span id="gps">0</span></p>
     </div>
 
     <div class="fisher">🧑‍🦰🎣 〰️〰️〰️ 🌊</div>
@@ -24,6 +26,10 @@
     </div>
 
     <p id="log">낚싯대를 던졌어요...</p>
+
+    <!-- 상점: 버튼은 game.js가 UPGRADES 목록을 보고 자동으로 만들어 넣어요 -->
+    <h2>🛒 상점</h2>
+    <div id="shop"></div>
   </main>
 
   <!-- 게임 동작은 game.js에 있어요. 화면(HTML)을 다 읽은 뒤에 실행되도록 맨 아래에 둬요 -->
