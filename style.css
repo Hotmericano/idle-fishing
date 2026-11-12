@@ -99,6 +99,47 @@ h2 {
   color: #666;
 }
 
+/* 오프라인 보상 창: 화면 전체를 어둡게 덮고 가운데에 상자를 띄워요 */
+.popup {
+  position: fixed;
+  inset: 0;   /* 화면 네 귀퉁이에 딱 붙이기 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.popup.hidden {
+  display: none;
+}
+
+.popup-box {
+  width: 300px;
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.popup-box h2 {
+  text-align: center;
+  margin-top: 0;
+}
+
+.popup-box p {
+  line-height: 1.6;
+}
+
+#offline-ok {
+  padding: 10px 32px;
+  border: none;
+  border-radius: 10px;
+  background: #3a8fd6;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
 footer {
   display: flex;
   justify-content: space-between;

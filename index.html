@@ -37,6 +37,15 @@
     </footer>
   </main>
 
+  <!-- 오프라인 보상 창: 평소에는 hidden으로 숨겨두고, 보상이 있을 때만 보여줘요 -->
+  <div id="offline-popup" class="popup hidden">
+    <div class="popup-box">
+      <h2>🌙 다시 오셨네요!</h2>
+      <p id="offline-text"></p>
+      <button id="offline-ok">받기</button>
+    </div>
+  </div>
+
   <!-- 게임 동작은 game.js에 있어요. 화면(HTML)을 다 읽은 뒤에 실행되도록 맨 아래에 둬요 -->
   <script src="game.js"></script>
 </body>

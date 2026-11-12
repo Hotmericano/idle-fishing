@@ -38,6 +38,10 @@ const state = {
 const SAVE_KEY = "idle-fishing-save";   // 메모장에서 우리 게임 데이터를 찾을 때 쓰는 이름
 let isResetting = false;                // 초기화 중에는 저장하지 않으려고 쓰는 표시
 
+const MAX_OFFLINE_SECONDS = 12 * 60 * 60;   // 오프라인 보상은 최대 12시간까지만 쌓여요
+let offlineSeconds = 0;                     // 불러올 때 계산한 "꺼져 있던 시간(초)"
+let offlineWasCapped = false;               // 12시간을 넘겨서 잘렸는지
+
 function saveGame() {
   if (isResetting) {
     return;
@@ -66,6 +70,12 @@ function loadGame() {
     // levels는 하나씩 덮어써요. 나중에 업그레이드가 새로 추가돼도
     // 옛날 세이브에 없는 업그레이드는 기본값 0이 그대로 남아요.
     Object.assign(state.levels, saved.levels);
+
+    // 꺼져 있던 시간 = 지금 시각 - 마지막으로 저장한 시각
+    // Math.max(0, ...): PC 시계가 뒤로 돌아가 있어도 음수가 되지 않게 막아요
+    const awaySeconds = Math.max(0, (Date.now() - saveData.savedAt) / 1000) || 0;
+    offlineWasCapped = awaySeconds > MAX_OFFLINE_SECONDS;
+    offlineSeconds = Math.min(awaySeconds, MAX_OFFLINE_SECONDS);
   } catch (error) {
     // 저장 데이터가 깨져 있으면 게임이 멈추지 않게 새 게임으로 시작해요
     console.warn("저장 데이터를 불러오지 못했어요:", error);
@@ -131,6 +141,29 @@ function catchFish() {
   state.fishCaught += count;
   state.gold += earned;
   logText.textContent = `🐟 물고기 ${count}마리를 낚았어요! (+${earned} 골드)`;
+}
+
+// 오프라인 보상: 꺼져 있던 시간 동안 잡았을 물고기를 한 번에 계산해요.
+// 게임 루프처럼 0.1초씩 돌리지 않고 곱셈 한 번으로 끝내요. 12시간이어도 순식간이에요.
+function giveOfflineReward(seconds) {
+  const totalProgress = state.progress + seconds / getCatchTime();
+  const catches = Math.floor(totalProgress);    // 완성된 낚시 횟수
+  state.progress = totalProgress - catches;     // 남은 진행도는 이어서
+
+  const fish = catches * getFishPerCatch();
+  const gold = fish * getFishPrice();
+  state.fishCaught += fish;
+  state.gold += gold;
+  return { fish, gold };
+}
+
+// 초를 "3시간 12분" 같은 글자로 바꿔요
+function formatDuration(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}시간 ${m}분`;
+  if (m > 0) return `${m}분`;
+  return `${Math.floor(seconds)}초`;
 }
 
 function buyUpgrade(upgrade) {
@@ -228,3 +261,25 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("beforeunload", saveGame);
 
 document.getElementById("reset").addEventListener("click", resetGame);
+
+// ============================================================
+// 10. 오프라인 보상 지급
+//    보상은 항상 주지만, 보상 창은 1분 이상 비웠을 때만 띄워요. (새로고침할 때마다 뜨면 귀찮으니까)
+// ============================================================
+const popup = document.getElementById("offline-popup");
+const reward = giveOfflineReward(offlineSeconds);
+
+if (offlineSeconds >= 60) {
+  let message = `${formatDuration(offlineSeconds)} 동안 물고기 ${reward.fish}마리를 낚아서<br>💰 ${reward.gold} 골드를 벌었어요!`;
+  if (offlineWasCapped) {
+    message += `<br><small>(오프라인 보상은 최대 12시간까지 쌓여요)</small>`;
+  }
+  document.getElementById("offline-text").innerHTML = message;
+  popup.classList.remove("hidden");
+  saveGame();   // 받은 보상을 바로 저장해서, 새로고침으로 두 번 받는 일을 막아요
+  render();
+}
+
+document.getElementById("offline-ok").addEventListener("click", () => {
+  popup.classList.add("hidden");
+});
