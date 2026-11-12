@@ -1,0 +1,50 @@
+/* 화면 전체 배경과 글꼴 */
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;   /* 가로 가운데 정렬 */
+  align-items: center;       /* 세로 가운데 정렬 */
+  background: linear-gradient(#bfe6ff, #3a8fd6);  /* 하늘 → 바다 느낌 */
+  font-family: sans-serif;
+}
+
+/* 게임 화면 상자 */
+.game {
+  width: 360px;
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.stats p {
+  font-size: 20px;
+  margin: 8px 0;
+}
+
+.fisher {
+  font-size: 32px;
+  margin: 20px 0;
+}
+
+/* 진행도 막대의 바깥 상자 */
+.bar {
+  height: 16px;
+  background: #e3eef7;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 진행도 막대의 안쪽 (JavaScript가 width를 바꿔요) */
+#bar-fill {
+  height: 100%;
+  width: 0%;
+  background: #3a8fd6;
+}
+
+#log {
+  color: #555;
+  min-height: 24px;
+}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>방치 낚시</title>
+  <!-- 꾸미기(디자인)는 style.css 파일에 따로 적어요 -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game">
+    <h1>🎣 방치 낚시</h1>
+
+    <!-- id는 JavaScript가 이 요소를 찾을 때 쓰는 "이름표"예요 -->
+    <div class="stats">
+      <p>💰 골드: <span id="gold">0</span></p>
+      <p>🐟 잡은 물고기: <span id="fish-count">0</span>마리</p>
+    </div>
+
+    <div class="fisher">🧑‍🦰🎣 〰️〰️〰️ 🌊</div>
+
+    <!-- 낚시 진행도 막대: 바깥 상자 안에서 안쪽 막대의 너비가 0% → 100%로 늘어나요 -->
+    <div class="bar">
+      <div id="bar-fill"></div>
+    </div>
+
+    <p id="log">낚싯대를 던졌어요...</p>
+  </main>
+
+  <!-- 게임 동작은 game.js에 있어요. 화면(HTML)을 다 읽은 뒤에 실행되도록 맨 아래에 둬요 -->
+  <script src="game.js"></script>
+</body>
+</html>
