@@ -18,7 +18,11 @@
       <p class="small">⏱️ 초당 골드: <span id="gps">0</span></p>
     </div>
 
-    <div class="fisher">🧑‍🦰🎣 〰️〰️〰️ 🌊</div>
+    <!-- 낚시터 선택: 버튼은 game.js가 SPOTS 목록을 보고 만들어요 -->
+    <div id="spots"></div>
+
+    <p class="spot-name">📍 <span id="spot-name"></span></p>
+    <div class="fisher">🧑‍🦰🎣 〰️〰️〰️ <span id="last-fish">🌊</span></div>
 
     <!-- 낚시 진행도 막대: 바깥 상자 안에서 안쪽 막대의 너비가 0% → 100%로 늘어나요 -->
     <div class="bar">
@@ -30,6 +34,10 @@
     <!-- 상점: 버튼은 game.js가 UPGRADES 목록을 보고 자동으로 만들어 넣어요 -->
     <h2>🛒 상점</h2>
     <div id="shop"></div>
+
+    <!-- 도감: 잡은 적 없는 물고기는 ❓로 가려져 있어요 -->
+    <h2>📖 도감 <span id="dex-count" class="dex-total"></span></h2>
+    <div id="dex"></div>
 
     <footer>
       <span>💾 5초마다 자동 저장돼요</span>
