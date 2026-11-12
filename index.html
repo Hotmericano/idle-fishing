@@ -22,7 +22,16 @@
     <div id="spots"></div>
 
     <p class="spot-name">📍 <span id="spot-name"></span></p>
-    <div class="fisher">🧑‍🦰🎣 〰️〰️〰️ <span id="last-fish">🌊</span></div>
+
+    <!-- 낚시 장면: 안에 있는 것들을 CSS로 "겹쳐서" 배치해요 -->
+    <div id="scene" class="scene">
+      <span class="fisher-man">🧑‍🦰🎣</span>
+      <span id="bobber" class="bobber">🔴</span>
+      <!-- 물결: 똑같은 내용을 두 번 이어 붙여서, 왼쪽으로 흘려보내며 무한 반복해요 -->
+      <div class="water">〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️</div>
+      <!-- 잡은 물고기와 +골드 글자가 여기서 튀어 올라요 -->
+      <div id="pop-layer"></div>
+    </div>
 
     <!-- 낚시 진행도 막대: 바깥 상자 안에서 안쪽 막대의 너비가 0% → 100%로 늘어나요 -->
     <div class="bar">
@@ -44,6 +53,9 @@
       <button id="reset">처음부터 하기</button>
     </footer>
   </main>
+
+  <!-- 전설 물고기, 새 물고기 발견 때 화면 위쪽에 뜨는 알림 -->
+  <div id="banner" class="banner"></div>
 
   <!-- 오프라인 보상 창: 평소에는 hidden으로 숨겨두고, 보상이 있을 때만 보여줘요 -->
   <div id="offline-popup" class="popup hidden">

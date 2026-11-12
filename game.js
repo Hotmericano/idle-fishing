@@ -215,6 +215,40 @@ function rollFish(spot) {
   return spot.fish[0];   // 혹시 모를 계산 오차 대비
 }
 
+// ---------- 연출(애니메이션) 도우미 ----------
+// 애니메이션 자체는 style.css의 @keyframes에 적혀 있고,
+// JavaScript는 "언제 그 애니메이션을 틀지"만 정해요. (클래스를 붙였다 뗐다 하는 방식)
+
+// 같은 애니메이션을 처음부터 다시 틀어요.
+// 클래스를 뗐다가 바로 붙이면 브라우저가 "바뀐 게 없네" 하고 무시해요.
+// 그래서 중간에 offsetWidth를 한 번 읽어서, 브라우저가 "뗀 상태"를 한 번 그리게 만들어요.
+function playAnimation(element, className) {
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+
+// 낚시 장면 위로 글자(이모지)가 튀어 올랐다 사라지게 해요
+function spawnPop(text, className) {
+  if (popLayer.childElementCount > 20) {
+    return;   // 탭을 오래 내려뒀다 돌아오면 한꺼번에 수십 개가 생길 수 있어서 개수 제한
+  }
+  const pop = document.createElement("span");
+  pop.className = "pop " + className;
+  pop.textContent = text;
+  pop.style.left = (50 + Math.random() * 30) + "%";   // 찌 근처에서 조금씩 다른 위치
+  popLayer.appendChild(pop);
+  // 애니메이션이 끝나면 스스로 지워져요 (안 지우면 화면에 계속 쌓여요)
+  pop.addEventListener("animationend", () => pop.remove());
+}
+
+// 화면 위쪽 알림 띄우기. type은 "legendary"(전설) 또는 "new"(새 물고기)
+function showBanner(text, type) {
+  banner.textContent = text;
+  banner.className = "banner " + type;
+  playAnimation(banner, "show");
+}
+
 // 숫자를 1,234,567처럼 쉼표를 넣어 보여줘요
 function formatNumber(n) {
   return Math.floor(n).toLocaleString("ko-KR");
@@ -236,7 +270,10 @@ const goldText = document.getElementById("gold");
 const fishCountText = document.getElementById("fish-count");
 const gpsText = document.getElementById("gps");
 const spotNameText = document.getElementById("spot-name");
-const lastFishText = document.getElementById("last-fish");
+const scene = document.getElementById("scene");
+const bobber = document.getElementById("bobber");
+const popLayer = document.getElementById("pop-layer");
+const banner = document.getElementById("banner");
 const barFill = document.getElementById("bar-fill");
 const logText = document.getElementById("log");
 const dexCountText = document.getElementById("dex-count");
@@ -276,7 +313,19 @@ function catchFish() {
   const count = getFishPerCatch();
   const rarity = RARITIES[best.rarity];
   const others = count > 1 ? ` 외 ${count - 1}마리` : "";
-  lastFishText.textContent = best.emoji;
+
+  // 연출: 제일 좋은 물고기와 번 골드가 물 위로 튀어 올라요
+  spawnPop(best.emoji, "pop-fish rarity-" + best.rarity);
+  spawnPop("+" + formatNumber(totalGold), "pop-gold");
+
+  if (best.rarity === "legendary") {
+    showBanner(`🌟 전설의 물고기! ${best.emoji} ${best.name} 🌟`, "legendary");
+    playAnimation(scene, "shake");        // 화면이 흔들려요
+  } else if (newFish) {
+    showBanner(`📖 새로운 물고기 발견! ${newFish.emoji} ${newFish.name}`, "new");
+  } else if (best.rarity === "rare") {
+    playAnimation(scene, "flash-rare");   // 장면이 파랗게 반짝여요
+  }
 
   if (newFish) {
     logText.textContent = `📖 새로운 물고기 발견! ${newFish.emoji} ${newFish.name} (${RARITIES[newFish.rarity].name})`;
@@ -417,6 +466,12 @@ function render() {
   gpsText.textContent = getGoldPerSecond().toFixed(1);   // 소수점 한 자리까지
   spotNameText.textContent = `${currentSpot.emoji} ${currentSpot.name}`;
   barFill.style.width = (state.progress * 100) + "%";
+
+  // 낚시터마다 배경 색을 바꿔요. body에 data-spot="sea" 같은 표시를 붙이면 CSS가 알아서 색을 골라요.
+  document.body.dataset.spot = state.spot;
+
+  // 곧 물고기가 잡힐 때(진행도 80% 이상) 찌가 파르르 떨려요
+  bobber.classList.toggle("bite", state.progress > 0.8);
 
   // 상점
   for (const upgrade of UPGRADES) {
