@@ -371,6 +371,54 @@ h2 {
   cursor: not-allowed;
 }
 
+/* ============================================================
+   환생
+   ============================================================ */
+.rebirth-box {
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f3ecff, #e4f4ff);
+}
+
+.rebirth-box p {
+  margin: 4px 0;
+}
+
+.rebirth-box .small {
+  font-size: 13px;
+  color: #666;
+}
+
+#rebirth-button {
+  width: 100%;
+  margin: 8px 0 4px;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #8a5cf6, #4c8dff);
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#rebirth-button:disabled {
+  background: #ddd;
+  color: #999;
+  cursor: not-allowed;
+}
+
+/* 진주 상점 버튼은 보라색 */
+.upgrade.pearl {
+  border-color: #8a5cf6;
+  background: #f7f2ff;
+}
+
+.upgrade.pearl:hover:not(:disabled) {
+  background: #ece2ff;
+}
+
 /* 업그레이드 버튼 하나 */
 .upgrade {
   display: grid;

@@ -52,6 +52,17 @@ const UPGRADES = [
   { id: "crew", emoji: "🧑‍✈️", name: "선원",   desc: "한 번에 잡는 물고기 +1", baseCost: 100, growth: 2.5 },
 ];
 
+// 진주 상점 (환생해도 사라지지 않는 영구 업그레이드)
+//    maxLevel: 최대 레벨 (Infinity = 제한 없음)
+const PEARL_UPGRADES = [
+  { id: "net",      emoji: "💰", name: "황금 그물",   desc: "물고기 가격 영구 +25%",           baseCost: 2, growth: 1.5, maxLevel: Infinity },
+  { id: "luck",     emoji: "🍀", name: "행운의 부적", desc: "희귀·전설 물고기 확률 +25%",      baseCost: 3, growth: 1.6, maxLevel: 10 },
+  { id: "vacation", emoji: "🌙", name: "긴 휴가",     desc: "오프라인 보상 최대 시간 +2시간", baseCost: 2, growth: 2,   maxLevel: 6 },
+];
+
+const DEX_BONUS = 0.05;        // 도감에 등록된 물고기 1종당 물고기 가격 +5%
+const PEARL_DIVISOR = 1000000; // 진주 = √(이번 판에 번 골드 ÷ 100만)
+
 // 모든 물고기를 한 줄로 펼친 목록 (도감에서 써요)
 const ALL_FISH = SPOTS.flatMap((spot) => spot.fish);
 
@@ -70,7 +81,17 @@ const state = {
   },
   spot: "lake",             // 지금 낚시 중인 낚시터
   unlockedSpots: ["lake"],  // 열어둔 낚시터 목록
-  dex: {},                  // 도감: { 물고기id: 잡은 마릿수 }
+  dex: {},                  // 도감: { 물고기id: 잡은 마릿수 }  ← 환생해도 남아요
+  runGold: 0,               // 이번 판(환생 이후)에 번 골드 총합. 진주 계산에 써요
+
+  // ----- 여기부터는 환생해도 남는 값 -----
+  pearls: 0,                // 가진 진주
+  rebirths: 0,              // 환생한 횟수
+  pearlLevels: {            // 진주 상점 업그레이드 레벨
+    net: 0,
+    luck: 0,
+    vacation: 0,
+  },
 };
 
 // ============================================================
@@ -81,16 +102,15 @@ const state = {
 const SAVE_KEY = "idle-fishing-save";   // 메모장에서 우리 게임 데이터를 찾을 때 쓰는 이름
 let isResetting = false;                // 초기화 중에는 저장하지 않으려고 쓰는 표시
 
-const MAX_OFFLINE_SECONDS = 12 * 60 * 60;   // 오프라인 보상은 최대 12시간까지만 쌓여요
-let offlineSeconds = 0;                     // 불러올 때 계산한 "꺼져 있던 시간(초)"
-let offlineWasCapped = false;               // 12시간을 넘겨서 잘렸는지
+let offlineSeconds = 0;        // 불러올 때 계산한 "꺼져 있던 시간(초)"
+let offlineWasCapped = false;  // 최대 시간을 넘겨서 잘렸는지
 
 function saveGame() {
   if (isResetting) {
     return;
   }
   const saveData = {
-    version: 2,             // 5단계에서 낚시터/도감이 생겨서 2로 올렸어요
+    version: 3,             // 환생 시스템이 생겨서 3으로 올렸어요
     savedAt: Date.now(),    // 언제 저장했는지 (오프라인 보상 계산에 써요)
     state: state,
   };
@@ -123,11 +143,18 @@ function loadGame() {
       state.spot = saved.spot;
     }
 
+    // 환생 관련 값 (version 3부터). 옛날 세이브에는 없으니 없으면 0으로.
+    state.runGold = saved.runGold || 0;
+    state.pearls = saved.pearls || 0;
+    state.rebirths = saved.rebirths || 0;
+    Object.assign(state.pearlLevels, saved.pearlLevels);
+
     // 꺼져 있던 시간 = 지금 시각 - 마지막으로 저장한 시각
     // Math.max(0, ...): PC 시계가 뒤로 돌아가 있어도 음수가 되지 않게 막아요
     const awaySeconds = Math.max(0, (Date.now() - saveData.savedAt) / 1000) || 0;
-    offlineWasCapped = awaySeconds > MAX_OFFLINE_SECONDS;
-    offlineSeconds = Math.min(awaySeconds, MAX_OFFLINE_SECONDS);
+    const maxSeconds = getMaxOfflineHours() * 60 * 60;
+    offlineWasCapped = awaySeconds > maxSeconds;
+    offlineSeconds = Math.min(awaySeconds, maxSeconds);
   } catch (error) {
     // 저장 데이터가 깨져 있으면 게임이 멈추지 않게 새 게임으로 시작해요
     console.warn("저장 데이터를 불러오지 못했어요:", error);
@@ -135,7 +162,7 @@ function loadGame() {
 }
 
 function resetGame() {
-  if (!confirm("정말 처음부터 다시 시작할까요? 모든 진행 상황이 사라져요.")) {
+  if (!confirm("정말 처음부터 다시 시작할까요? 진주와 도감까지 모든 진행 상황이 사라져요.")) {
     return;
   }
   isResetting = true;
@@ -154,9 +181,32 @@ function getCatchTime() {
   return 3 / (1 + 0.2 * state.levels.rod);
 }
 
+// 물고기 가격 배율 = 미끼 × 황금 그물 × 도감 보너스
+// 세 보너스를 "곱하기"로 합쳐요. 그래서 하나만 올리는 것보다 골고루 올리는 게 효과가 커요.
 function getPriceMultiplier() {
-  // 미끼 레벨마다 물고기 가격이 50%씩 올라가요. (Lv.2 → 2배)
-  return 1 + 0.5 * state.levels.bait;
+  const bait = 1 + 0.5 * state.levels.bait;          // 미끼 레벨마다 +50%
+  const net = 1 + 0.25 * state.pearlLevels.net;       // 황금 그물 레벨마다 +25%
+  const dex = 1 + DEX_BONUS * getDexFound();          // 도감 1종마다 +5%
+  return bait * net * dex;
+}
+
+// 도감에 등록된 물고기 종류 수
+function getDexFound() {
+  return ALL_FISH.filter((fish) => state.dex[fish.id] > 0).length;
+}
+
+// 오프라인 보상 최대 시간: 기본 12시간 + 긴 휴가 레벨마다 2시간
+function getMaxOfflineHours() {
+  return 12 + 2 * state.pearlLevels.vacation;
+}
+
+// 물고기 하나의 뽑기 가중치. 행운의 부적은 희귀·전설의 가중치만 키워요.
+function getFishWeight(fish) {
+  const weight = RARITIES[fish.rarity].weight;
+  if (fish.rarity === "rare" || fish.rarity === "legendary") {
+    return weight * (1 + 0.25 * state.pearlLevels.luck);
+  }
+  return weight;
 }
 
 function getFishPerCatch() {
@@ -167,11 +217,11 @@ function getCurrentSpot() {
   return SPOTS.find((spot) => spot.id === state.spot);
 }
 
-// 한 낚시터의 등급 가중치를 전부 더한 값 (지금은 어디든 70+22+7+1 = 100)
+// 한 낚시터의 가중치를 전부 더한 값 (행운의 부적이 없으면 70+22+7+1 = 100)
 function getTotalWeight(spot) {
   let total = 0;
   for (const fish of spot.fish) {
-    total += RARITIES[fish.rarity].weight;
+    total += getFishWeight(fish);
   }
   return total;
 }
@@ -182,7 +232,7 @@ function getExpectedFishPrice(spot) {
   const total = getTotalWeight(spot);
   let sum = 0;
   for (const fish of spot.fish) {
-    sum += fish.price * (RARITIES[fish.rarity].weight / total);
+    sum += fish.price * (getFishWeight(fish) / total);
   }
   return sum;
 }
@@ -222,7 +272,7 @@ function getMaxBuyCount(upgrade) {
 function rollFish(spot) {
   let r = Math.random() * getTotalWeight(spot);
   for (const fish of spot.fish) {
-    r -= RARITIES[fish.rarity].weight;
+    r -= getFishWeight(fish);
     if (r < 0) {
       return fish;
     }
@@ -322,6 +372,7 @@ function addFish(fish, count) {
   state.fishCaught += count;
   const gold = fish.price * count * getPriceMultiplier();
   state.gold += gold;
+  state.runGold += gold;   // 진주 계산용으로 "이번 판에 번 돈"도 따로 쌓아요
   return { gold, isNew };
 }
 
@@ -386,7 +437,7 @@ function giveOfflineReward(seconds) {
   const newFish = [];
 
   for (const fish of spot.fish) {
-    const count = Math.floor(totalFish * RARITIES[fish.rarity].weight / totalWeight);
+    const count = Math.floor(totalFish * getFishWeight(fish) / totalWeight);
     if (count > 0) {
       const result = addFish(fish, count);
       gold += result.gold;
@@ -463,6 +514,77 @@ function buyAllMax() {
   render();
 }
 
+// ---------- 환생 ----------
+
+// 지금 환생하면 받을 진주 개수
+// 제곱근(√)을 쓰기 때문에 골드를 4배 벌어도 진주는 2배만 늘어요.
+// 그래서 한 판을 끝없이 오래 하기보다, 적당할 때 환생하는 게 이득이 돼요.
+function getPearlsOnRebirth() {
+  return Math.floor(Math.sqrt(state.runGold / PEARL_DIVISOR));
+}
+
+// 진주를 하나 더 받으려면 이번 판에 골드를 총 얼마 벌어야 하는지
+//   진주 n개 ← √(번 골드 ÷ 100만) = n  ←→  번 골드 = n² × 100만
+function getGoldForNextPearl() {
+  const next = getPearlsOnRebirth() + 1;
+  return next * next * PEARL_DIVISOR;
+}
+
+// 환생 조건: 심해를 열었고, 진주를 1개 이상 받을 수 있을 것
+function canRebirth() {
+  return state.unlockedSpots.includes("deep") && getPearlsOnRebirth() >= 1;
+}
+
+function rebirth() {
+  if (!canRebirth()) {
+    return;
+  }
+  const pearls = getPearlsOnRebirth();
+  if (!confirm(`환생하면 골드, 업그레이드, 낚시터가 처음으로 돌아가요.\n대신 진주 ${pearls}개를 받아요. (진주와 도감은 남아요)\n환생할까요?`)) {
+    return;
+  }
+
+  state.pearls += pearls;
+  state.rebirths += 1;
+
+  // 이번 판 진행 상황만 처음으로 되돌려요
+  state.gold = 0;
+  state.progress = 0;
+  state.runGold = 0;
+  for (const upgrade of UPGRADES) {
+    state.levels[upgrade.id] = 0;
+  }
+  state.spot = "lake";
+  state.unlockedSpots = ["lake"];
+
+  showBanner(`🔄 ${state.rebirths}번째 환생! 진주 ${pearls}개를 받았어요 🦪`, "new");
+  logText.textContent = "새로운 마음으로 낚싯대를 던졌어요...";
+  logText.style.color = "";
+  saveGame();
+  render();
+}
+
+// 진주 상점 가격 (올림해서 정수로)
+function getPearlCost(upgrade, level = state.pearlLevels[upgrade.id]) {
+  return Math.ceil(upgrade.baseCost * Math.pow(upgrade.growth, level));
+}
+
+function buyPearlUpgrade(upgrade) {
+  if (state.pearlLevels[upgrade.id] >= upgrade.maxLevel) {
+    return;   // 이미 최대 레벨
+  }
+  const cost = getPearlCost(upgrade);
+  if (state.pearls < cost) {
+    return;
+  }
+  state.pearls -= cost;
+  state.pearlLevels[upgrade.id] += 1;
+  logText.textContent = `${upgrade.emoji} ${upgrade.name} 레벨 업! (Lv.${state.pearlLevels[upgrade.id]})`;
+  logText.style.color = "";
+  saveGame();   // 진주는 귀하니까 바로 저장
+  render();
+}
+
 function clickSpot(spot) {
   if (state.unlockedSpots.includes(spot.id)) {
     // 이미 열린 낚시터 → 그곳으로 이동
@@ -522,6 +644,24 @@ for (const upgrade of UPGRADES) {
 
 document.getElementById("buy-all").addEventListener("click", buyAllMax);
 
+// 진주 상점 (상점과 같은 방식인데 MAX 버튼은 없어요)
+const pearlButtons = {};
+for (const upgrade of PEARL_UPGRADES) {
+  const button = document.createElement("button");
+  button.className = "upgrade pearl";
+  const name = makeSpan("name");
+  const desc = makeSpan("desc");
+  desc.textContent = upgrade.desc;
+  const cost = makeSpan("cost");
+  button.append(name, desc, cost);
+  button.addEventListener("click", () => buyPearlUpgrade(upgrade));
+  document.getElementById("pearl-shop").appendChild(button);
+  pearlButtons[upgrade.id] = { button, name, cost };
+}
+
+const rebirthButton = document.getElementById("rebirth-button");
+rebirthButton.addEventListener("click", rebirth);
+
 // 낚시터
 const spotButtons = {};
 for (const spot of SPOTS) {
@@ -579,6 +719,30 @@ function render() {
   // 제일 싼 업그레이드도 못 사면 "전부 올리기"도 잠가요
   const cheapestCost = Math.min(...UPGRADES.map((upgrade) => getCost(upgrade)));
   document.getElementById("buy-all").disabled = state.gold < cheapestCost;
+
+  // 환생
+  document.getElementById("pearls").textContent = formatNumber(state.pearls);
+  document.getElementById("rebirths").textContent = state.rebirths;
+  document.getElementById("dex-bonus").textContent = Math.round(DEX_BONUS * getDexFound() * 100);
+
+  const rebirthHint = document.getElementById("rebirth-hint");
+  rebirthButton.disabled = !canRebirth();
+  if (!state.unlockedSpots.includes("deep")) {
+    rebirthButton.textContent = "🔄 환생하기";
+    rebirthHint.textContent = "🌌 심해를 열면 환생할 수 있어요";
+  } else {
+    rebirthButton.textContent = `🔄 환생하기 (+${getPearlsOnRebirth()} 🦪)`;
+    rebirthHint.textContent = `다음 진주까지: 이번 판 수입 💰${formatNumber(state.runGold)} / ${formatNumber(getGoldForNextPearl())}`;
+  }
+
+  for (const upgrade of PEARL_UPGRADES) {
+    const ui = pearlButtons[upgrade.id];
+    const level = state.pearlLevels[upgrade.id];
+    const isMax = level >= upgrade.maxLevel;
+    ui.name.textContent = `${upgrade.emoji} ${upgrade.name} Lv.${level}`;
+    ui.cost.textContent = isMax ? "MAX" : `🦪 ${getPearlCost(upgrade)}`;
+    ui.button.disabled = isMax || state.pearls < getPearlCost(upgrade);
+  }
 
   // 낚시터
   for (const spot of SPOTS) {
@@ -671,7 +835,7 @@ if (offlineSeconds >= 60) {
     message += `<br>📖 새로 발견: ${names}`;
   }
   if (offlineWasCapped) {
-    message += `<br><small>(오프라인 보상은 최대 12시간까지 쌓여요)</small>`;
+    message += `<br><small>(오프라인 보상은 최대 ${getMaxOfflineHours()}시간까지 쌓여요)</small>`;
   }
   document.getElementById("offline-text").innerHTML = message;
   popup.classList.remove("hidden");
