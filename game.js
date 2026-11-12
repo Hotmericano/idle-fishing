@@ -30,6 +30,60 @@ const state = {
 };
 
 // ============================================================
+// 2-1. 저장하기 / 불러오기
+//    localStorage는 브라우저 안에 있는 작은 "메모장"이에요.
+//    글자(문자열)만 저장할 수 있어서, state 객체를 JSON이라는 글자 형식으로 바꿔서 넣어요.
+//    (사이트 주소별로 따로 저장되고, 브라우저 기록을 지우면 같이 지워져요)
+// ============================================================
+const SAVE_KEY = "idle-fishing-save";   // 메모장에서 우리 게임 데이터를 찾을 때 쓰는 이름
+let isResetting = false;                // 초기화 중에는 저장하지 않으려고 쓰는 표시
+
+function saveGame() {
+  if (isResetting) {
+    return;
+  }
+  const saveData = {
+    version: 1,             // 나중에 저장 형식이 바뀌면 옛날 세이브를 구별하려고 붙여둬요
+    savedAt: Date.now(),    // 언제 저장했는지 (다음 단계 "오프라인 보상"에서 써요)
+    state: state,
+  };
+  localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));   // 객체 → 글자
+}
+
+function loadGame() {
+  const text = localStorage.getItem(SAVE_KEY);
+  if (text === null) {
+    return;   // 저장된 게 없으면 (처음 하는 사람) 그냥 새 게임
+  }
+
+  try {
+    const saveData = JSON.parse(text);   // 글자 → 객체
+    const saved = saveData.state;
+
+    state.gold = saved.gold;
+    state.fishCaught = saved.fishCaught;
+    state.progress = saved.progress;
+    // levels는 하나씩 덮어써요. 나중에 업그레이드가 새로 추가돼도
+    // 옛날 세이브에 없는 업그레이드는 기본값 0이 그대로 남아요.
+    Object.assign(state.levels, saved.levels);
+  } catch (error) {
+    // 저장 데이터가 깨져 있으면 게임이 멈추지 않게 새 게임으로 시작해요
+    console.warn("저장 데이터를 불러오지 못했어요:", error);
+  }
+}
+
+function resetGame() {
+  if (!confirm("정말 처음부터 다시 시작할까요? 모든 진행 상황이 사라져요.")) {
+    return;
+  }
+  isResetting = true;
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();   // 페이지 새로고침 → 빈 상태로 시작
+}
+
+loadGame();   // 게임이 켜지자마자 저장된 데이터를 불러와요
+
+// ============================================================
 // 3. 능력치 계산
 //    레벨을 넣으면 능력치가 나오는 "공식"이에요.
 //    밸런스를 바꾸고 싶으면 이 숫자들만 고치면 돼요.
@@ -159,3 +213,18 @@ function update() {
 
 setInterval(update, 100);
 render();
+
+// ============================================================
+// 9. 자동 저장
+//    5초마다 저장하고, 탭을 닫거나 다른 탭으로 넘어갈 때도 한 번 더 저장해요.
+// ============================================================
+setInterval(saveGame, 5000);
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    saveGame();
+  }
+});
+window.addEventListener("beforeunload", saveGame);
+
+document.getElementById("reset").addEventListener("click", resetGame);
