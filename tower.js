@@ -15,7 +15,7 @@
 // ------------------------------------------------------------
 const TOWER = {
   attemptsPerDay: 3,    // 하루 도전 횟수
-  maxTension: 3,        // 실패를 몇 번 하면 물고기를 놓치는지
+  baseTension: 3,       // 실패를 몇 번 하면 물고기를 놓치는지 (튼튼한 낚싯줄로 늘어나요)
   pauseAfterPress: 400, // 누른 뒤 결과를 보여주려고 잠깐 멈추는 시간(밀리초)
   checkpointEvery: 10,  // 몇 층마다 체크포인트가 생기는지 (= 보스 층)
 };
@@ -26,7 +26,16 @@ const TOWER = {
 //    테스트 모드에서는 도전 횟수가 줄지 않고, 시작 층을 고를 수 있고, 기록은 저장하지 않아요.
 const TEST_MODE = new URLSearchParams(location.search).has("test");
 
+// 줄 긴장도 한도: 기본 3 + 튼튼한 낚싯줄 레벨
+function getMaxTension() {
+  return TOWER.baseTension + state.pearlLevels.line;
+}
+
 // 층 정보를 계산해요. 층이 올라갈수록 찌가 빨라지고, 노란 구간이 좁아지고, 체력이 늘어요.
+//
+// 난이도의 핵심은 "찌가 노란 구간 안에 머무는 시간" = 구간 너비 ÷ 찌 속도 예요.
+//   (처음 버전은 30층에서 이 시간이 0.03초밖에 안 돼서 너무 어려웠어요)
+//   지금 공식 기준: 1층 0.36초 → 10층 0.23초 → 20층 0.15초 → 30층 0.1초 → 50층 0.05초
 function getFloorInfo(floor) {
   const isBoss = floor % TOWER.checkpointEvery === 0;   // 10층, 20층, 30층... 은 보스 층
   const bossLevel = floor / TOWER.checkpointEvery;       // 10층 보스 = 1, 20층 보스 = 2 ...
@@ -37,23 +46,27 @@ function getFloorInfo(floor) {
   // 보스는 그 낚시터의 전설 물고기, 나머지 층은 흔함 → 보통 → 희귀를 돌아가며
   const fish = isBoss ? fishList[3] : fishList[(floor - 1) % 3];
 
-  // 체력: 2에서 시작해서 5층마다 1씩 늘고, 보스는 2배
-  const hp = (2 + Math.floor((floor - 1) / 5)) * (isBoss ? 2 : 1);
+  // 체력: 2에서 시작해서 8층마다 1씩 늘고, 보스는 2배
+  const hp = (2 + Math.floor((floor - 1) / 8)) * (isBoss ? 2 : 1);
 
-  // 찌 속도: 1초에 막대 길이의 몇 배만큼 움직이는지. 1층마다 5%씩 빨라져요.
-  const speed = 0.7 * (1 + 0.05 * (floor - 1));
+  // 찌 속도: 1초에 막대 길이의 몇 배만큼 움직이는지. 1층마다 2.5%씩 빨라지고, 최대 2배(1.4)까지만.
+  // 🪨 묵직한 추: 레벨마다 3%씩 느려져요.
+  const baseSpeed = Math.min(1.4, 0.7 * (1 + 0.025 * (floor - 1)));
+  const speed = baseSpeed * (1 - 0.03 * state.pearlLevels.sinker);
 
-  // 노란 구간 너비: 막대 전체의 25%에서 시작해서 1층마다 5%씩 좁아져요. 최소 5%.
-  // 보스 층은 20% 더 좁아요.
-  const zoneWidth = Math.max(0.05, 0.25 * Math.pow(0.95, floor - 1)) * (isBoss ? 0.8 : 1);
+  // 노란 구간 너비: 막대 전체의 25%에서 시작해서 1층마다 2.5%씩 좁아져요. 최소 6%.
+  // 보스 층은 20% 더 좁아요. 🎯 매의 눈: 레벨마다 8%씩 넓어져요.
+  const baseZone = Math.max(0.06, 0.25 * Math.pow(0.975, floor - 1)) * (isBoss ? 0.8 : 1);
+  const zoneWidth = Math.min(0.5, baseZone * (1 + 0.08 * state.pearlLevels.eye));
 
   const info = { floor, isBoss, fish, hp, speed, zoneWidth };
 
   if (isBoss) {
     // 폭주 모드 설정
     info.shield = Math.min(2 + bossLevel, 8);                                // 보호막 횟수: 3, 4, 5 ... 최대 8
-    info.ringDuration = Math.max(0.7, 1.4 - 0.1 * (bossLevel - 1));          // 원이 다 줄어드는 시간(초)
-    info.ringTolerance = Math.max(0.08, 0.16 - 0.02 * (bossLevel - 1));      // 판정 여유 (클수록 쉬움)
+    info.ringDuration = Math.max(0.8, 1.4 - 0.08 * (bossLevel - 1));         // 원이 다 줄어드는 시간(초)
+    // 판정 여유 (클수록 쉬움). ⚡ 반사 신경: 레벨마다 10%씩 넓어져요.
+    info.ringTolerance = Math.max(0.1, 0.16 - 0.015 * (bossLevel - 1)) * (1 + 0.1 * state.pearlLevels.reflex);
   }
   return info;
 }
@@ -320,7 +333,7 @@ function tryHitZone(now) {
 function registerMiss(text) {
   run.tension += 1;
   playAnimation(run.mode === "rage" ? rageArena : catchBar, "miss");
-  if (run.tension >= TOWER.maxTension) {
+  if (run.tension >= getMaxTension()) {
     endRun(`💢 줄이 끊어졌어요! ${run.info.fish.emoji} ${run.info.fish.name}을(를) 놓쳤어요`);
     return true;
   }
@@ -451,7 +464,7 @@ function renderTower() {
   document.getElementById("tower-hp-text").textContent = `체력 ${run.hp} / ${info.hp}`;
   // 긴장도: 실패한 횟수만큼 ●, 남은 만큼 ○
   document.getElementById("tower-tension").textContent =
-    "🧵 줄 긴장도 " + "●".repeat(run.tension) + "○".repeat(TOWER.maxTension - run.tension);
+    "🧵 줄 긴장도 " + "●".repeat(run.tension) + "○".repeat(getMaxTension() - run.tension);
   if (run.mode === "rage") {
     shieldText.textContent = "🛡️ 보호막 " + "■".repeat(run.shield) + "□".repeat(info.shield - run.shield);
   }

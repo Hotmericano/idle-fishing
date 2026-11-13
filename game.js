@@ -58,6 +58,12 @@ const PEARL_UPGRADES = [
   { id: "net",      emoji: "💰", name: "황금 그물",   desc: "물고기 가격 영구 +25%",           baseCost: 2, growth: 1.5, maxLevel: Infinity },
   { id: "luck",     emoji: "🍀", name: "행운의 부적", desc: "희귀·전설 물고기 확률 +25%",      baseCost: 3, growth: 1.6, maxLevel: 10 },
   { id: "vacation", emoji: "🌙", name: "긴 휴가",     desc: "오프라인 보상 최대 시간 +2시간", baseCost: 2, growth: 2,   maxLevel: 6 },
+
+  // ----- 🗼 탑 강화 (group: "tower") : 무한의 탑을 쉽게 만들어줘요. 효과는 tower.js에서 써요 -----
+  { id: "eye",    group: "tower", emoji: "🎯", name: "매의 눈",       desc: "탑의 노란 구간 +8%",           baseCost: 3, growth: 1.6, maxLevel: 10 },
+  { id: "sinker", group: "tower", emoji: "🪨", name: "묵직한 추",     desc: "탑의 찌 속도 -3%",             baseCost: 3, growth: 1.6, maxLevel: 10 },
+  { id: "line",   group: "tower", emoji: "🧵", name: "튼튼한 낚싯줄", desc: "줄 긴장도 한도 +1 (실패 1번 더)", baseCost: 6, growth: 3,   maxLevel: 2 },
+  { id: "reflex", group: "tower", emoji: "⚡", name: "반사 신경",     desc: "보스 폭주 판정 +10%",          baseCost: 3, growth: 1.7, maxLevel: 5 },
 ];
 
 const DEX_BONUS = 0.05;        // 도감에 등록된 물고기 1종당 물고기 가격 +5%
@@ -92,6 +98,10 @@ const state = {
     net: 0,
     luck: 0,
     vacation: 0,
+    eye: 0,       // 🗼 탑 강화
+    sinker: 0,
+    line: 0,
+    reflex: 0,
   },
   tower: {                  // 무한의 탑 (tower.js에서 써요)
     best: 0,                // 최고 기록 (돌파한 층)
@@ -664,7 +674,9 @@ for (const upgrade of PEARL_UPGRADES) {
   const cost = makeSpan("cost");
   button.append(name, desc, cost);
   button.addEventListener("click", () => buyPearlUpgrade(upgrade));
-  document.getElementById("pearl-shop").appendChild(button);
+  // 탑 강화는 아래쪽 "🗼 탑 강화" 칸에, 나머지는 위쪽 칸에 넣어요
+  const shopId = upgrade.group === "tower" ? "pearl-tower-shop" : "pearl-shop";
+  document.getElementById(shopId).appendChild(button);
   pearlButtons[upgrade.id] = { button, name, cost };
 }
 

@@ -855,3 +855,11 @@ footer {
   font-size: 11px;
   color: #888;
 }
+
+/* 진주 상점 안의 작은 제목 ("🗼 탑 강화") */
+.sub-title {
+  margin: 12px 0 6px;
+  font-size: 15px;
+  text-align: left;
+  color: #5b3bb5;
+}
