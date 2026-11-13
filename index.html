@@ -40,6 +40,15 @@
 
     <p id="log">낚싯대를 던졌어요...</p>
 
+    <!-- 무한의 탑 입구 -->
+    <div class="tower-entry">
+      <div>
+        <b>🗼 무한의 탑</b><br>
+        <span class="small">최고 <span id="tower-best">0</span>층 · 수입 +<span id="tower-bonus">0</span>%</span>
+      </div>
+      <button id="tower-open">도전</button>
+    </div>
+
     <!-- 상점: 버튼은 game.js가 UPGRADES 목록을 보고 자동으로 만들어 넣어요 -->
     <div class="shop-header">
       <h2>🛒 상점</h2>
@@ -79,7 +88,41 @@
     </div>
   </div>
 
+  <!-- 무한의 탑 창 -->
+  <div id="tower" class="popup hidden">
+    <div id="tower-box" class="popup-box tower-box">
+      <div id="tower-play">
+        <div class="tower-top">
+          <span id="tower-floor">🗼 1층</span>
+          <button id="tower-quit">포기</button>
+        </div>
+        <div id="tower-fish" class="tower-fish">🐟</div>
+        <div id="tower-fish-name" class="tower-fish-name"></div>
+        <div class="hp-bar"><div id="tower-hp-fill"></div></div>
+        <div id="tower-hp-text" class="small"></div>
+        <div id="tower-tension" class="tension"></div>
+
+        <!-- 캐치 막대: 노란 구간(catch-zone)과 왕복하는 찌(catch-pointer) -->
+        <div id="catch-bar" class="catch-bar">
+          <div id="catch-zone"></div>
+          <div id="catch-pointer"></div>
+        </div>
+
+        <button id="catch-button">🎣 낚아채기! <small>(스페이스바)</small></button>
+        <p id="tower-message"></p>
+      </div>
+
+      <div id="tower-result" class="hidden">
+        <h2>🗼 도전 종료</h2>
+        <p id="tower-result-text"></p>
+        <button id="tower-close">닫기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 게임 동작은 game.js에 있어요. 화면(HTML)을 다 읽은 뒤에 실행되도록 맨 아래에 둬요 -->
   <script src="game.js"></script>
+  <!-- 무한의 탑은 game.js의 함수들을 쓰기 때문에 그 다음에 불러와요 -->
+  <script src="tower.js"></script>
 </body>
 </html>

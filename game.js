@@ -62,6 +62,7 @@ const PEARL_UPGRADES = [
 
 const DEX_BONUS = 0.05;        // 도감에 등록된 물고기 1종당 물고기 가격 +5%
 const PEARL_DIVISOR = 1000000; // 진주 = √(이번 판에 번 골드 ÷ 100만)
+const TOWER_BONUS = 0.02;      // 무한의 탑 최고 기록 1층당 물고기 가격 +2%
 
 // 모든 물고기를 한 줄로 펼친 목록 (도감에서 써요)
 const ALL_FISH = SPOTS.flatMap((spot) => spot.fish);
@@ -92,6 +93,11 @@ const state = {
     luck: 0,
     vacation: 0,
   },
+  tower: {                  // 무한의 탑 (tower.js에서 써요)
+    best: 0,                // 최고 기록 (돌파한 층)
+    attemptsLeft: 3,        // 오늘 남은 도전 횟수
+    lastDay: "",            // 도전 횟수를 마지막으로 채워준 날짜
+  },
 };
 
 // ============================================================
@@ -110,7 +116,7 @@ function saveGame() {
     return;
   }
   const saveData = {
-    version: 3,             // 환생 시스템이 생겨서 3으로 올렸어요
+    version: 4,             // 무한의 탑이 생겨서 4로 올렸어요
     savedAt: Date.now(),    // 언제 저장했는지 (오프라인 보상 계산에 써요)
     state: state,
   };
@@ -148,6 +154,7 @@ function loadGame() {
     state.pearls = saved.pearls || 0;
     state.rebirths = saved.rebirths || 0;
     Object.assign(state.pearlLevels, saved.pearlLevels);
+    Object.assign(state.tower, saved.tower);   // version 4부터
 
     // 꺼져 있던 시간 = 지금 시각 - 마지막으로 저장한 시각
     // Math.max(0, ...): PC 시계가 뒤로 돌아가 있어도 음수가 되지 않게 막아요
@@ -181,13 +188,14 @@ function getCatchTime() {
   return 3 / (1 + 0.2 * state.levels.rod);
 }
 
-// 물고기 가격 배율 = 미끼 × 황금 그물 × 도감 보너스
-// 세 보너스를 "곱하기"로 합쳐요. 그래서 하나만 올리는 것보다 골고루 올리는 게 효과가 커요.
+// 물고기 가격 배율 = 미끼 × 황금 그물 × 도감 보너스 × 탑 보너스
+// 보너스들을 "곱하기"로 합쳐요. 그래서 하나만 올리는 것보다 골고루 올리는 게 효과가 커요.
 function getPriceMultiplier() {
   const bait = 1 + 0.5 * state.levels.bait;          // 미끼 레벨마다 +50%
   const net = 1 + 0.25 * state.pearlLevels.net;       // 황금 그물 레벨마다 +25%
   const dex = 1 + DEX_BONUS * getDexFound();          // 도감 1종마다 +5%
-  return bait * net * dex;
+  const tower = 1 + TOWER_BONUS * state.tower.best;   // 탑 최고 기록 1층마다 +2%
+  return bait * net * dex * tower;
 }
 
 // 도감에 등록된 물고기 종류 수
