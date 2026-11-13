@@ -1,7 +1,10 @@
 // ============================================================
 // 🗼 무한의 탑
 //    방치형 본편과 달리, 직접 타이밍을 맞춰서 낚는 모드예요.
-//    막대 위를 찌가 왕복하고, 노란 구간에 있을 때 누르면 성공!
+//
+//    [기본 모드] 막대 위를 찌가 왕복하고, 노란 구간에 있을 때 누르면 성공!
+//    [폭주 모드] 보스 체력이 절반이 되면 보호막을 두르고 돌아다녀요.
+//               줄어드는 노란 원이 파란 보호막 원에 겹칠 때 눌러야 보호막이 깎여요.
 //
 //    이 파일은 game.js 다음에 불러와요. 그래서 game.js에 있는
 //    state, saveGame, showBanner, playAnimation, SPOTS 등을 그대로 쓸 수 있어요.
@@ -11,14 +14,16 @@
 // 1. 탑 설정값
 // ------------------------------------------------------------
 const TOWER = {
-  attemptsPerDay: 3,   // 하루 도전 횟수
-  maxTension: 3,       // 실패를 몇 번 하면 물고기를 놓치는지
-  pauseAfterPress: 400 // 누른 뒤 결과를 보여주려고 찌를 잠깐 멈추는 시간(밀리초)
+  attemptsPerDay: 3,    // 하루 도전 횟수
+  maxTension: 3,        // 실패를 몇 번 하면 물고기를 놓치는지
+  pauseAfterPress: 400, // 누른 뒤 결과를 보여주려고 잠깐 멈추는 시간(밀리초)
+  checkpointEvery: 10,  // 몇 층마다 체크포인트가 생기는지 (= 보스 층)
 };
 
 // 층 정보를 계산해요. 층이 올라갈수록 찌가 빨라지고, 노란 구간이 좁아지고, 체력이 늘어요.
 function getFloorInfo(floor) {
-  const isBoss = floor % 10 === 0;   // 10층, 20층, 30층... 은 보스 층
+  const isBoss = floor % TOWER.checkpointEvery === 0;   // 10층, 20층, 30층... 은 보스 층
+  const bossLevel = floor / TOWER.checkpointEvery;       // 10층 보스 = 1, 20층 보스 = 2 ...
 
   // 1~10층은 호수, 11~20층은 바다, 21층부터는 심해 물고기가 나와요
   const tier = Math.min(Math.floor((floor - 1) / 10), SPOTS.length - 1);
@@ -36,11 +41,19 @@ function getFloorInfo(floor) {
   // 보스 층은 20% 더 좁아요.
   const zoneWidth = Math.max(0.05, 0.25 * Math.pow(0.95, floor - 1)) * (isBoss ? 0.8 : 1);
 
-  return { floor, isBoss, fish, hp, speed, zoneWidth };
+  const info = { floor, isBoss, fish, hp, speed, zoneWidth };
+
+  if (isBoss) {
+    // 폭주 모드 설정
+    info.shield = Math.min(2 + bossLevel, 8);                                // 보호막 횟수: 3, 4, 5 ... 최대 8
+    info.ringDuration = Math.max(0.7, 1.4 - 0.1 * (bossLevel - 1));          // 원이 다 줄어드는 시간(초)
+    info.ringTolerance = Math.max(0.08, 0.16 - 0.02 * (bossLevel - 1));      // 판정 여유 (클수록 쉬움)
+  }
+  return info;
 }
 
 // ------------------------------------------------------------
-// 2. 하루 도전 횟수
+// 2. 하루 도전 횟수, 체크포인트
 // ------------------------------------------------------------
 
 // 오늘 날짜를 "2026-11-13" 같은 글자로 만들어요
@@ -58,6 +71,17 @@ function refreshDailyAttempts() {
   }
 }
 
+// 체크포인트 기능이 생기기 전에 이미 10층 이상 깬 사람은, 그 기록에 맞춰 체크포인트를 잡아줘요.
+// 예: 최고 기록 14층 → 체크포인트 10층 → 다음 도전은 11층부터
+state.tower.checkpoint = Math.max(
+  state.tower.checkpoint,
+  Math.floor(state.tower.best / TOWER.checkpointEvery) * TOWER.checkpointEvery
+);
+
+function getStartFloor() {
+  return state.tower.checkpoint + 1;
+}
+
 // ------------------------------------------------------------
 // 3. 화면 요소
 // ------------------------------------------------------------
@@ -65,11 +89,16 @@ const towerPopup = document.getElementById("tower");
 const towerPlay = document.getElementById("tower-play");
 const towerResult = document.getElementById("tower-result");
 const towerBox = document.getElementById("tower-box");
+const towerFish = document.getElementById("tower-fish");
+const towerMessage = document.getElementById("tower-message");
 const catchBar = document.getElementById("catch-bar");
 const catchZone = document.getElementById("catch-zone");
 const catchPointer = document.getElementById("catch-pointer");
-const towerMessage = document.getElementById("tower-message");
-const towerFish = document.getElementById("tower-fish");
+const rageArena = document.getElementById("rage-arena");
+const rageFish = document.getElementById("rage-fish");
+const rageFishEmoji = document.getElementById("rage-fish-emoji");
+const ringApproach = document.getElementById("ring-approach");
+const shieldText = document.getElementById("tower-shield");
 
 // 맞았을 때 움찔하는 애니메이션(hurt)이 끝나면 클래스를 떼서, 다시 몸부림(swim)으로 돌아가게 해요
 towerFish.addEventListener("animationend", (event) => {
@@ -94,21 +123,31 @@ function startRun() {
 
   run = {
     active: true,
-    floor: 1,
+    startFloor: getStartFloor(),
+    floor: 0,
     info: null,
     hp: 0,
     tension: 0,
+    mode: "bar",        // "bar" = 기본 모드, "rage" = 보스 폭주 모드
+    rageDone: false,    // 이번 보스의 폭주를 이미 이겨냈는지
+    // 기본 모드용
     pos: 0,             // 찌 위치 (0 = 왼쪽 끝, 1 = 오른쪽 끝)
     dir: 1,             // 움직이는 방향 (1 = 오른쪽, -1 = 왼쪽)
     zoneStart: 0,       // 노란 구간이 시작하는 위치
-    frozenUntil: 0,     // 이 시각까지는 찌가 멈춰 있어요
+    // 폭주 모드용
+    shield: 0,          // 남은 보호막
+    ringStart: 0,       // 이번 원이 줄어들기 시작하는 시각
+    ringScale: 3,       // 지금 원 크기 (보호막 원 = 1)
+    ringActive: false,  // 원이 줄어드는 중인지
+    // 공통
+    frozenUntil: 0,     // 이 시각까지는 입력을 받지 않아요
     lastFrame: performance.now(),
   };
 
   towerPlay.classList.remove("hidden");
   towerResult.classList.add("hidden");
   towerPopup.classList.remove("hidden");
-  setupFloor(1);
+  setupFloor(run.startFloor);
   requestAnimationFrame(towerLoop);
 }
 
@@ -119,13 +158,26 @@ function setupFloor(floor) {
   run.tension = 0;
   run.pos = 0;
   run.dir = 1;
+  setMode("bar");
+  run.rageDone = false;
   placeZone();
 
   towerBox.classList.toggle("boss", run.info.isBoss);
   towerMessage.textContent = run.info.isBoss
-    ? "👑 보스 층! 구간이 더 좁아요"
+    ? "👑 보스 층! 체력이 절반이 되면 폭주해요"
     : "노란 구간에서 스페이스바(또는 버튼)를 누르세요";
   renderTower();
+}
+
+// 기본 모드 ↔ 폭주 모드 전환: 보여줄 것과 숨길 것을 바꿔요
+function setMode(mode) {
+  run.mode = mode;
+  const isRage = mode === "rage";
+  catchBar.classList.toggle("hidden", isRage);
+  towerFish.classList.toggle("hidden", isRage);
+  rageArena.classList.toggle("hidden", !isRage);
+  shieldText.classList.toggle("hidden", !isRage);
+  towerBox.classList.toggle("raging", isRage);
 }
 
 // 노란 구간을 막대 위 아무 곳에나 새로 놓아요. 리듬만으로 맞추지 못하게 하려고요.
@@ -148,6 +200,17 @@ function towerLoop(now) {
   const dt = (now - run.lastFrame) / 1000;
   run.lastFrame = now;
 
+  if (run.mode === "bar") {
+    updatePointer(now, dt);
+  } else {
+    updateRing(now);
+  }
+
+  requestAnimationFrame(towerLoop);
+}
+
+// 기본 모드: 찌를 좌우로 움직여요
+function updatePointer(now, dt) {
   if (now >= run.frozenUntil) {
     run.pos += run.dir * run.info.speed * dt;
     // 벽에 닿으면 튕겨서 반대로 (넘어간 만큼 되돌려 놓아요)
@@ -160,9 +223,33 @@ function towerLoop(now) {
       run.dir = 1;
     }
   }
-
   catchPointer.style.left = (run.pos * 100) + "%";
-  requestAnimationFrame(towerLoop);
+}
+
+// 폭주 모드: 노란 원을 줄여요
+//   t = 0 일 때 크기 3배 → t = 1 일 때 크기 0.5배
+//   크기가 1 근처(보호막 원과 겹칠 때)에 누르면 성공
+function updateRing(now) {
+  const t = (now - run.ringStart) / (run.info.ringDuration * 1000);
+  if (t < 0) {
+    // 아직 보스가 이동 중이라 원이 안 나왔어요
+    run.ringActive = false;
+    ringApproach.style.opacity = 0;
+    return;
+  }
+  if (t >= 1) {
+    // 원이 다 줄어들 때까지 안 눌렀어요 → 실패
+    run.ringActive = false;
+    ringApproach.style.opacity = 0;
+    if (!registerMiss("⌛ 너무 늦었어요! 줄이 팽팽해져요")) {
+      nextRing(300);
+    }
+    return;
+  }
+  run.ringActive = true;
+  run.ringScale = 3 - 2.5 * t;
+  ringApproach.style.opacity = 1;
+  ringApproach.style.transform = `scale(${run.ringScale})`;
 }
 
 // ------------------------------------------------------------
@@ -178,60 +265,158 @@ function tryCatch() {
   if (run === null || !run.active || now < run.frozenUntil) {
     return;   // 도전 중이 아니거나, 결과를 보여주는 중이면 무시
   }
+
+  if (run.mode === "rage") {
+    tryBreakShield(now);
+  } else {
+    tryHitZone(now);
+  }
+}
+
+// 기본 모드: 찌가 노란 구간 안에 있는지 확인
+function tryHitZone(now) {
   run.frozenUntil = now + TOWER.pauseAfterPress;
 
   const zoneEnd = run.zoneStart + run.info.zoneWidth;
   const inZone = run.pos >= run.zoneStart && run.pos <= zoneEnd;
 
-  if (inZone) {
-    run.hp -= 1;
-    playAnimation(catchBar, "hit");
-    playAnimation(towerFish, "hurt");
-    if (run.hp <= 0) {
-      floorCleared();
-      return;
-    }
-    towerMessage.textContent = "✨ 성공! 물고기가 지쳐가요";
-    placeZone();
-  } else {
-    run.tension += 1;
-    playAnimation(catchBar, "miss");
-    if (run.tension >= TOWER.maxTension) {
-      endRun(`💢 줄이 끊어졌어요! ${run.info.fish.emoji} ${run.info.fish.name}을(를) 놓쳤어요`);
-      return;
-    }
-    towerMessage.textContent = "💢 빗나갔어요! 줄이 팽팽해져요";
+  if (!inZone) {
+    registerMiss("💢 빗나갔어요! 줄이 팽팽해져요");
+    return;
   }
+
+  run.hp -= 1;
+  playAnimation(catchBar, "hit");
+  playAnimation(towerFish, "hurt");
+
+  if (run.hp <= 0) {
+    floorCleared();
+    return;
+  }
+  // 보스 체력이 절반 이하가 되면 폭주! (한 번만)
+  if (run.info.isBoss && !run.rageDone && run.hp <= run.info.hp / 2) {
+    startRage();
+    return;
+  }
+  towerMessage.textContent = "✨ 성공! 물고기가 지쳐가요";
+  placeZone();
   renderTower();
 }
 
+// 실패 처리 (두 모드 공통). 줄이 끊어져서 도전이 끝나면 true를 돌려줘요.
+function registerMiss(text) {
+  run.tension += 1;
+  playAnimation(run.mode === "rage" ? rageArena : catchBar, "miss");
+  if (run.tension >= TOWER.maxTension) {
+    endRun(`💢 줄이 끊어졌어요! ${run.info.fish.emoji} ${run.info.fish.name}을(를) 놓쳤어요`);
+    return true;
+  }
+  towerMessage.textContent = text;
+  renderTower();
+  return false;
+}
+
+// ------------------------------------------------------------
+// 7. 보스 폭주
+// ------------------------------------------------------------
+function startRage() {
+  setMode("rage");
+  run.shield = run.info.shield;
+  rageFishEmoji.textContent = run.info.fish.emoji;
+  showBanner(`🔥 ${run.info.fish.name} 폭주! 보호막이 생겼어요`, "legendary");
+  towerMessage.textContent = "줄어드는 노란 원이 파란 보호막에 겹칠 때 누르세요!";
+  run.frozenUntil = performance.now() + 900;
+  nextRing(900);
+  renderTower();
+}
+
+// 보스를 새 위치로 이동시키고, 도착하면 새 원을 시작해요
+function nextRing(delay = 0) {
+  run.ringActive = false;
+  ringApproach.style.opacity = 0;
+  // 경기장 안쪽 아무 곳 (가장자리에 붙지 않게 15~85%, 25~75% 사이)
+  rageFish.style.left = (15 + Math.random() * 70) + "%";
+  rageFish.style.top = (25 + Math.random() * 50) + "%";
+  // CSS transition으로 0.35초 동안 헤엄쳐 가요. 도착한 뒤에 원이 줄어들기 시작해요.
+  run.ringStart = performance.now() + delay + 350;
+}
+
+function tryBreakShield(now) {
+  if (!run.ringActive) {
+    return;   // 보스가 이동 중일 때 누른 건 무시
+  }
+  run.frozenUntil = now + 250;
+  run.ringActive = false;
+
+  // 원 크기가 1(보호막 크기)에서 얼마나 벗어났는지
+  const diff = Math.abs(run.ringScale - 1);
+
+  if (diff > run.info.ringTolerance) {
+    const text = run.ringScale > 1 ? "💨 너무 빨랐어요! 줄이 팽팽해져요" : "⌛ 너무 늦었어요! 줄이 팽팽해져요";
+    if (!registerMiss(text)) {
+      nextRing(250);
+    }
+    return;
+  }
+
+  run.shield -= 1;
+  playAnimation(rageArena, "shield-hit");
+  if (run.shield <= 0) {
+    endRage();
+    return;
+  }
+  towerMessage.textContent = `🛡️ 보호막에 금이 갔어요! (남은 보호막 ${run.shield})`;
+  nextRing(250);
+  renderTower();
+}
+
+function endRage() {
+  run.rageDone = true;
+  setMode("bar");
+  placeZone();
+  run.frozenUntil = performance.now() + 700;
+  towerMessage.textContent = "💥 보호막을 깨뜨렸어요! 다시 노란 구간을 노리세요";
+  renderTower();
+}
+
+// ------------------------------------------------------------
+// 8. 층 돌파, 도전 종료
+// ------------------------------------------------------------
 function floorCleared() {
   const floor = run.floor;
   let text = `🎉 ${floor}층 돌파!`;
   if (floor > state.tower.best) {
     state.tower.best = floor;   // 최고 기록 갱신 → 본편 수입 보너스도 바로 올라가요
     text += " (최고 기록!)";
-    saveGame();
   }
-  towerMessage.textContent = text;
-  run.frozenUntil = performance.now() + 900;
-  renderTower();
   if (run.info.isBoss) {
     showBanner(`👑 ${floor}층 보스 ${run.info.fish.emoji} ${run.info.fish.name} 격파!`, "legendary");
+    if (floor > state.tower.checkpoint) {
+      state.tower.checkpoint = floor;
+      text += ` 🚩 다음 도전은 ${floor + 1}층부터!`;
+    }
   }
+  saveGame();
+  towerMessage.textContent = text;
+  run.frozenUntil = performance.now() + 1200;
+  renderTower();
   setTimeout(() => {
     if (run !== null && run.active) {
       setupFloor(floor + 1);
     }
-  }, 900);
+  }, 1200);
 }
 
 function endRun(reason) {
   run.active = false;
-  const cleared = run.floor - 1;
+  const cleared = run.floor - 1;   // 실패한 층 바로 아래까지 돌파
+  const thisRun = cleared >= run.startFloor
+    ? `${run.startFloor}층 → <b>${cleared}층</b> 돌파`
+    : `${run.startFloor}층에서 실패`;
   document.getElementById("tower-result-text").innerHTML =
-    `${reason}<br><br>이번 기록: <b>${cleared}층</b> 돌파<br>`
+    `${reason}<br><br>이번 도전: ${thisRun}<br>`
     + `최고 기록: <b>${state.tower.best}층</b> (본편 수입 +${Math.round(TOWER_BONUS * state.tower.best * 100)}%)<br>`
+    + `🚩 다음 시작: ${getStartFloor()}층<br>`
     + `오늘 남은 도전: ${state.tower.attemptsLeft}회`;
   towerPlay.classList.add("hidden");
   towerResult.classList.remove("hidden");
@@ -239,18 +424,22 @@ function endRun(reason) {
 }
 
 // ------------------------------------------------------------
-// 7. 화면 그리기
+// 9. 화면 그리기
 // ------------------------------------------------------------
 function renderTower() {
   const info = run.info;
   document.getElementById("tower-floor").textContent = `🗼 ${info.floor}층${info.isBoss ? " 👑" : ""}`;
   towerFish.textContent = info.fish.emoji;
-  document.getElementById("tower-fish-name").textContent = info.fish.name;
+  document.getElementById("tower-fish-name").textContent =
+    info.fish.name + (run.mode === "rage" ? " 🔥폭주🔥" : "");
   document.getElementById("tower-hp-fill").style.width = (run.hp / info.hp * 100) + "%";
   document.getElementById("tower-hp-text").textContent = `체력 ${run.hp} / ${info.hp}`;
   // 긴장도: 실패한 횟수만큼 ●, 남은 만큼 ○
   document.getElementById("tower-tension").textContent =
     "🧵 줄 긴장도 " + "●".repeat(run.tension) + "○".repeat(TOWER.maxTension - run.tension);
+  if (run.mode === "rage") {
+    shieldText.textContent = "🛡️ 보호막 " + "■".repeat(run.shield) + "□".repeat(info.shield - run.shield);
+  }
 }
 
 // 본편 화면의 탑 입구 카드
@@ -258,6 +447,7 @@ function renderTowerEntry() {
   refreshDailyAttempts();
   document.getElementById("tower-best").textContent = state.tower.best;
   document.getElementById("tower-bonus").textContent = Math.round(TOWER_BONUS * state.tower.best * 100);
+  document.getElementById("tower-start").textContent = getStartFloor();
   const openButton = document.getElementById("tower-open");
   openButton.textContent = state.tower.attemptsLeft > 0
     ? `도전 (${state.tower.attemptsLeft}/${TOWER.attemptsPerDay})`
@@ -266,7 +456,7 @@ function renderTowerEntry() {
 }
 
 // ------------------------------------------------------------
-// 8. 버튼과 키보드 연결
+// 10. 버튼과 키보드 연결
 // ------------------------------------------------------------
 document.getElementById("tower-open").addEventListener("click", startRun);
 document.getElementById("catch-button").addEventListener("click", tryCatch);

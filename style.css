@@ -734,3 +734,102 @@ footer {
   25%      { transform: translateX(-6px); background: #f7c9c9; }
   75%      { transform: translateX(6px); }
 }
+
+/* ============================================================
+   무한의 탑: 보스 폭주
+   ============================================================ */
+.tower-box.raging {
+  border-color: #ff4d3d;
+  animation: rage-glow 0.8s ease-in-out infinite;
+}
+
+.shield {
+  margin: -8px 0 12px;
+  color: #2a7fff;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+/* 폭주 경기장 */
+.rage-arena {
+  position: relative;
+  height: 180px;
+  border-radius: 12px;
+  background: radial-gradient(circle, #4a1414, #140505);
+  overflow: hidden;
+}
+
+/* 돌아다니는 보스: left/top이 바뀌면 transition 때문에 스르륵 헤엄쳐 가요 */
+.rage-fish {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);   /* 좌표가 물고기 "가운데"를 가리키게 */
+  transition: left 0.35s ease-out, top 0.35s ease-out;
+  font-size: 40px;
+}
+
+#rage-fish-emoji {
+  display: block;
+  animation: swim 0.5s ease-in-out infinite;   /* 폭주 중이라 빠르게 몸부림 */
+  filter: drop-shadow(0 0 8px #ff4d3d);
+}
+
+/* 파란 보호막 원 (기준 크기) */
+.ring-target,
+.ring-approach {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70px;
+  height: 70px;
+  margin: -35px 0 0 -35px;   /* 원의 가운데를 물고기 가운데에 맞춰요 */
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ring-target {
+  border: 4px solid rgba(90, 170, 255, 0.95);
+  background: rgba(90, 170, 255, 0.15);
+  box-shadow: 0 0 12px rgba(90, 170, 255, 0.9);
+}
+
+/* 줄어드는 노란 원: JavaScript가 transform: scale(3 → 0.5)로 크기를 바꿔요 */
+.ring-approach {
+  border: 3px solid #ffd23f;
+  opacity: 0;
+}
+
+.rage-arena.shield-hit .ring-target {
+  animation: shield-crack 0.3s;
+}
+
+.rage-arena.shield-hit {
+  animation: shield-flash 0.3s;
+}
+
+.rage-arena.miss {
+  animation: rage-miss 0.4s;
+}
+
+@keyframes rage-miss {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-6px); }
+  75%      { transform: translateX(6px); }
+}
+
+@keyframes rage-glow {
+  0%, 100% { box-shadow: 0 0 16px #ff4d3d; }
+  50%      { box-shadow: 0 0 40px #ff4d3d; }
+}
+
+@keyframes shield-crack {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.3); border-color: white; }
+  100% { transform: scale(1); }
+}
+
+@keyframes shield-flash {
+  0%, 100% { filter: brightness(1); }
+  30%      { filter: brightness(1.8); }
+}

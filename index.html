@@ -44,7 +44,8 @@
     <div class="tower-entry">
       <div>
         <b>🗼 무한의 탑</b><br>
-        <span class="small">최고 <span id="tower-best">0</span>층 · 수입 +<span id="tower-bonus">0</span>%</span>
+        <span class="small">최고 <span id="tower-best">0</span>층 · 수입 +<span id="tower-bonus">0</span>%</span><br>
+        <span class="small">🚩 다음 시작 <span id="tower-start">1</span>층</span>
       </div>
       <button id="tower-open">도전</button>
     </div>
@@ -101,6 +102,16 @@
         <div class="hp-bar"><div id="tower-hp-fill"></div></div>
         <div id="tower-hp-text" class="small"></div>
         <div id="tower-tension" class="tension"></div>
+        <div id="tower-shield" class="shield hidden"></div>
+
+        <!-- 보스 폭주 경기장: 보스가 돌아다니고, 노란 원이 파란 보호막 원으로 줄어들어요 -->
+        <div id="rage-arena" class="rage-arena hidden">
+          <div id="rage-fish" class="rage-fish">
+            <span id="rage-fish-emoji">🐉</span>
+            <div class="ring-target"></div>
+            <div id="ring-approach" class="ring-approach"></div>
+          </div>
+        </div>
 
         <!-- 캐치 막대: 노란 구간(catch-zone)과 왕복하는 찌(catch-pointer) -->
         <div id="catch-bar" class="catch-bar">

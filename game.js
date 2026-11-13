@@ -97,6 +97,7 @@ const state = {
     best: 0,                // 최고 기록 (돌파한 층)
     attemptsLeft: 3,        // 오늘 남은 도전 횟수
     lastDay: "",            // 도전 횟수를 마지막으로 채워준 날짜
+    checkpoint: 0,          // 깬 보스 층 중 가장 높은 층. 다음 도전은 그 다음 층부터
   },
 };
 
