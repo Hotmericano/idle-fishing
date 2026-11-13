@@ -833,3 +833,25 @@ footer {
   0%, 100% { filter: brightness(1); }
   30%      { filter: brightness(1.8); }
 }
+
+/* 🧪 테스트 모드 */
+.tower-test {
+  margin-top: 6px;
+  padding: 8px;
+  border: 2px dashed #8a5cf6;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #5b3bb5;
+}
+
+.tower-test input {
+  width: 56px;
+  padding: 2px 4px;
+  font-size: 14px;
+}
+
+.tower-test .small {
+  display: block;
+  font-size: 11px;
+  color: #888;
+}

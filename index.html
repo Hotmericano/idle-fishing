@@ -49,6 +49,12 @@
       </div>
       <button id="tower-open">도전</button>
     </div>
+    <!-- 🧪 테스트 모드(주소 뒤에 ?test)일 때만 보여요 -->
+    <div id="tower-test" class="tower-test hidden">
+      🧪 테스트 모드 · 시작 층
+      <input id="tower-test-floor" type="number" min="1" value="10">
+      <span class="small">(도전 횟수 안 줄어듦, 기록 저장 안 됨)</span>
+    </div>
 
     <!-- 상점: 버튼은 game.js가 UPGRADES 목록을 보고 자동으로 만들어 넣어요 -->
     <div class="shop-header">

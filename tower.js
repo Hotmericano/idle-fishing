@@ -20,6 +20,12 @@ const TOWER = {
   checkpointEvery: 10,  // 몇 층마다 체크포인트가 생기는지 (= 보스 층)
 };
 
+// 🧪 테스트 모드: 주소 뒤에 ?test 를 붙이면 켜져요.
+//    예) https://hotmericano.github.io/idle-fishing/?test
+//    location.search는 주소의 "?" 뒷부분이고, URLSearchParams는 그걸 쉽게 읽게 해주는 도구예요.
+//    테스트 모드에서는 도전 횟수가 줄지 않고, 시작 층을 고를 수 있고, 기록은 저장하지 않아요.
+const TEST_MODE = new URLSearchParams(location.search).has("test");
+
 // 층 정보를 계산해요. 층이 올라갈수록 찌가 빨라지고, 노란 구간이 좁아지고, 체력이 늘어요.
 function getFloorInfo(floor) {
   const isBoss = floor % TOWER.checkpointEvery === 0;   // 10층, 20층, 30층... 은 보스 층
@@ -115,15 +121,22 @@ let run = null;
 
 function startRun() {
   refreshDailyAttempts();
-  if (state.tower.attemptsLeft <= 0) {
-    return;
+  let startFloor = getStartFloor();
+
+  if (TEST_MODE) {
+    // 테스트 모드: 도전권을 쓰지 않고, 입력한 층부터 시작
+    startFloor = Math.max(1, Math.floor(Number(document.getElementById("tower-test-floor").value)) || 1);
+  } else {
+    if (state.tower.attemptsLeft <= 0) {
+      return;
+    }
+    state.tower.attemptsLeft -= 1;   // 시작할 때 도전권을 써요
+    saveGame();
   }
-  state.tower.attemptsLeft -= 1;   // 시작할 때 도전권을 써요
-  saveGame();
 
   run = {
     active: true,
-    startFloor: getStartFloor(),
+    startFloor: startFloor,
     floor: 0,
     info: null,
     hp: 0,
@@ -385,13 +398,15 @@ function endRage() {
 function floorCleared() {
   const floor = run.floor;
   let text = `🎉 ${floor}층 돌파!`;
-  if (floor > state.tower.best) {
+  if (TEST_MODE) {
+    text += " (🧪 테스트라 기록은 안 남아요)";
+  } else if (floor > state.tower.best) {
     state.tower.best = floor;   // 최고 기록 갱신 → 본편 수입 보너스도 바로 올라가요
     text += " (최고 기록!)";
   }
   if (run.info.isBoss) {
     showBanner(`👑 ${floor}층 보스 ${run.info.fish.emoji} ${run.info.fish.name} 격파!`, "legendary");
-    if (floor > state.tower.checkpoint) {
+    if (!TEST_MODE && floor > state.tower.checkpoint) {
       state.tower.checkpoint = floor;
       text += ` 🚩 다음 도전은 ${floor + 1}층부터!`;
     }
@@ -449,6 +464,11 @@ function renderTowerEntry() {
   document.getElementById("tower-bonus").textContent = Math.round(TOWER_BONUS * state.tower.best * 100);
   document.getElementById("tower-start").textContent = getStartFloor();
   const openButton = document.getElementById("tower-open");
+  if (TEST_MODE) {
+    openButton.textContent = "🧪 테스트 도전";
+    openButton.disabled = false;
+    return;
+  }
   openButton.textContent = state.tower.attemptsLeft > 0
     ? `도전 (${state.tower.attemptsLeft}/${TOWER.attemptsPerDay})`
     : "내일 다시";
@@ -479,6 +499,9 @@ document.addEventListener("keydown", (event) => {
     tryCatch();
   }
 });
+
+// 테스트 모드면 시작 층 입력 칸을 보여줘요
+document.getElementById("tower-test").classList.toggle("hidden", !TEST_MODE);
 
 renderTowerEntry();
 setInterval(renderTowerEntry, 1000);   // 자정이 지나면 도전 횟수가 채워진 게 보이도록
