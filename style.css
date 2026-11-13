@@ -1,119 +1,360 @@
-/* 화면 전체 배경과 글꼴 */
+/* ============================================================
+   🎨 방치 낚시 스타일 (픽셀아트 버전)
+
+   이 파일의 핵심 기술 두 가지
+   1) image-rendering: pixelated
+      작은 픽셀 그림을 크게 늘릴 때, 브라우저는 보통 부드럽게(흐릿하게) 늘려요.
+      이 설정을 주면 픽셀이 네모 모양 그대로 또렷하게 커져요.
+   2) border-image (9칸 늘리기)
+      버튼·패널 그림은 26×15픽셀처럼 작아요. 이걸 원하는 크기로 늘리면 테두리까지 같이 늘어나서 뭉개져요.
+      그래서 그림을 3×3 = 9칸으로 나눠서, 네 귀퉁이는 그대로 두고 가운데만 늘려요.
+      그러면 버튼이 길어지든 짧아지든 테두리 두께는 그대로예요.
+   ============================================================ */
+
+/* ---------- 기본 ---------- */
 body {
   margin: 0;
   min-height: 100vh;
   display: flex;
-  justify-content: center;   /* 가로 가운데 정렬 */
-  align-items: center;       /* 세로 가운데 정렬 */
-  background: linear-gradient(#bfe6ff, #3a8fd6);  /* 하늘 → 바다 느낌 */
-  font-family: sans-serif;
+  justify-content: center;
+  align-items: flex-start;
+  background: #1d2b4f;   /* 스프라이트 미리보기와 같은 남색 */
+  font-family: "Galmuri11", "Galmuri9", sans-serif;
+  color: #2e1a0a;
 }
 
-/* ============================================================
-   낚시터별 색깔
-   JavaScript가 <body data-spot="sea">처럼 표시를 붙이면, 아래 규칙 중 맞는 것이 적용돼요.
-   ============================================================ */
-body[data-spot="lake"] { background: linear-gradient(#d6f2d0, #4fa38a); }
-body[data-spot="sea"]  { background: linear-gradient(#bfe6ff, #1e6fc0); }
-body[data-spot="deep"] { background: linear-gradient(#1d2547, #05060f); }
+/* 픽셀 그림을 흐릿하지 않게 늘리기 */
+.pixel {
+  image-rendering: pixelated;
+  vertical-align: middle;
+}
 
-body[data-spot="lake"] .scene { background: linear-gradient(#e9f8ff 65%, #6cc3a0 65%); }
-body[data-spot="sea"]  .scene { background: linear-gradient(#d8efff 65%, #2b86d9 65%); }
-body[data-spot="deep"] .scene { background: linear-gradient(#2a2f55 65%, #0b1030 65%); }
+.hidden {
+  display: none !important;
+}
 
-/* 게임 화면 상자 */
+h1 {
+  margin: 4px 0 12px;
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: #6b3d16;
+  text-shadow: 2px 2px 0 #d9c08a;
+}
+
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 24px 0 8px;
+  font-size: 18px;
+  text-align: left;
+}
+
+.small {
+  font-size: 13px;
+}
+
+/* ---------- 패널 (나무, 남색) ----------
+   border-image: url(그림) 자를위치 fill / 테두리두께
+   - 자를위치 6: 그림 가장자리에서 6픽셀까지를 "테두리"로 써요
+   - fill: 가운데 칸도 채워요 (배경처럼)
+   - 테두리두께 12px: 6픽셀 테두리를 2배로 보여줘요 */
+.panel-wood {
+  border: 12px solid transparent;
+  border-image: url("assets/sprites/ui_panel_wood.png") 6 fill / 12px;
+  image-rendering: pixelated;
+}
+
+.panel-dark {
+  border: 12px solid transparent;
+  border-image: url("assets/sprites/ui_panel_dark.png") 6 fill / 12px;
+  image-rendering: pixelated;
+  color: #e8f1ff;
+}
+
+/* 게임 화면 전체 */
 .game {
-  width: 360px;
+  width: 380px;
   margin: 24px 0;
-  padding: 24px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: 12px 16px 16px;
   text-align: center;
 }
 
+/* ---------- 픽셀 버튼 ----------
+   버튼 그림(26×15)은 위 3줄이 밝은 테두리, 아래 4줄이 그림자예요.
+   그래서 자르는 위치를 위 3, 오른쪽 3, 아래 4, 왼쪽 3으로 줬어요. 3배로 보여줘요. */
+.btn,
+.upgrade,
+.max-button,
+.spot {
+  border-style: solid;
+  border-color: transparent;
+  border-width: 9px 9px 12px 9px;
+  border-image: url("assets/sprites/ui_button_green.png") 3 3 4 3 fill / 9px 9px 12px 9px;
+  image-rendering: pixelated;
+  background: none;
+  padding: 0 4px;
+  font-family: inherit;
+  font-weight: bold;
+  color: white;
+  text-shadow: 2px 2px 0 #22272e;   /* 픽셀 느낌의 딱딱한 그림자 */
+  cursor: pointer;
+}
+
+/* 누르는 순간: "눌린 버튼" 그림으로 바꿔요 */
+.btn:active:not(:disabled),
+.upgrade:active:not(:disabled),
+.spot:active:not(:disabled) {
+  border-image-source: url("assets/sprites/ui_button_green_pressed.png");
+}
+
+.btn-blue,
+.spot,
+.upgrade.pearl {
+  border-image-source: url("assets/sprites/ui_button_blue.png");
+}
+
+.btn-blue:active:not(:disabled),
+.spot:active:not(:disabled),
+.upgrade.pearl:active:not(:disabled) {
+  border-image-source: url("assets/sprites/ui_button_blue_pressed.png");
+}
+
+.btn-gold,
+.max-button,
+.spot.active {
+  border-image-source: url("assets/sprites/ui_button_gold.png");
+  color: #4a2c00;
+  text-shadow: 1px 1px 0 #ffe9a8;
+}
+
+.btn-gold:active:not(:disabled),
+.max-button:active:not(:disabled) {
+  border-image-source: url("assets/sprites/ui_button_gold_pressed.png");
+}
+
+/* 못 누르는 버튼은 회색 */
+.btn:disabled,
+.upgrade:disabled,
+.max-button:disabled,
+.spot:disabled {
+  border-image-source: url("assets/sprites/ui_button_disabled.png");
+  color: #e4e4e4;
+  text-shadow: 1px 1px 0 #6b7280;
+  cursor: not-allowed;
+}
+
+/* ---------- 위쪽 숫자 ---------- */
+.stats {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
 .stats p {
+  margin: 0;
   font-size: 20px;
-  margin: 8px 0;
+  font-weight: bold;
 }
 
 .stats .small {
-  font-size: 15px;
-  color: #666;
+  width: 100%;
+  font-size: 13px;
+  font-weight: normal;
+  color: #7a5530;
+}
+
+/* ---------- 낚시터 선택 ---------- */
+#spots {
+  display: flex;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.spot {
+  flex: 1;
+  min-height: 48px;
+  font-size: 13px;
+  white-space: pre-line;   /* 글자 속 줄바꿈(\n)을 그대로 보여줘요 */
+}
+
+/* 잠긴 낚시터: 자물쇠 그림을 글자 앞에 붙여요 (::before = 요소 맨 앞에 끼워 넣는 가짜 칸) */
+.spot.locked::before {
+  content: "";
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  margin-right: 2px;
+  vertical-align: -5px;
+  background: url("assets/sprites/icon_lock.png") center / 22px 22px no-repeat;
+  image-rendering: pixelated;
 }
 
 /* ============================================================
    낚시 장면
    position: relative인 상자 안에서, 자식들을 position: absolute로 원하는 위치에 겹쳐 놓아요.
+   높이 240px 중 위 110px은 하늘, 아래 130px은 물이에요.
    ============================================================ */
 .scene {
   position: relative;
-  height: 160px;
-  margin: 8px 0 16px;
-  border-radius: 12px;
-  overflow: hidden;   /* 상자 밖으로 나간 물결은 안 보이게 */
+  height: 240px;
+  margin: 12px 0;
+  overflow: hidden;   /* 상자 밖으로 나간 건 안 보이게 */
+  border: 4px solid #2e1a0a;
+  background: #2e1a0a;
 }
 
-.fisher-man {
-  position: absolute;
-  left: 12px;
-  bottom: 54px;   /* 물 높이(아래에서 35%) 바로 위 */
-  font-size: 36px;
-}
-
-.bobber {
-  position: absolute;
-  left: 62%;
-  bottom: 50px;
-  font-size: 14px;
-  animation: bob 2s ease-in-out infinite;   /* 찌가 둥실둥실 */
-}
-
-/* 곧 물고기가 물 때: 빠르게 떨려요 */
-.bobber.bite {
-  animation: nibble 0.2s linear infinite;
-}
-
-.water {
+.sky {
   position: absolute;
   left: 0;
-  bottom: 42px;
-  width: 200%;            /* 상자보다 두 배 길게 만들어서 */
-  font-size: 18px;
-  white-space: nowrap;
-  opacity: 0.6;
-  animation: wave 8s linear infinite;   /* 왼쪽으로 절반만큼 흘려보내고 처음으로 → 끊김 없이 반복 */
+  right: 0;
+  top: 0;
+  height: 110px;
+  background: linear-gradient(#9fd6f5, #d6efff);
 }
 
+/* 낚시터 이름표 (하늘 왼쪽 위) */
+.spot-name {
+  position: absolute;
+  left: 8px;
+  top: 6px;
+  padding: 2px 8px;
+  background: rgba(14, 25, 45, 0.7);
+  color: white;
+  font-size: 13px;
+}
+
+/* 물 표면: 물 타일(16×16)을 3배로(48px) 옆으로 이어 붙이고, 흘러가게 해요 */
+.water-surface {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 110px;
+  height: 48px;
+  background: url("assets/sprites/water_tile_0.png") repeat-x;
+  background-size: 48px 48px;
+  image-rendering: pixelated;
+  animation: water-flow 4s linear infinite, water-frames 1.2s steps(1) infinite;
+}
+
+/* 깊은 물: 물 타일 아래쪽 무늬만 잘라낸 그림(water_deep)을 바둑판처럼 깔아요 */
+.water-deep {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 134px;
+  bottom: 0;
+  background: #27699f url("assets/sprites/water_deep.png") repeat;
+  background-size: 48px 24px;
+  image-rendering: pixelated;
+  animation: water-flow 6s linear infinite;
+}
+
+/* 낚시터마다 하늘과 물 색깔 바꾸기
+   filter: hue-rotate(색상 돌리기), brightness(밝기), saturate(채도)로 같은 그림의 색만 바꿔요 */
+body[data-spot="lake"] .water-surface,
+body[data-spot="lake"] .water-deep {
+  filter: hue-rotate(-35deg) saturate(0.85);   /* 초록빛 호수 */
+}
+
+body[data-spot="lake"] .sky {
+  background: linear-gradient(#bfe8d0, #eef9ec);
+}
+
+body[data-spot="deep"] .water-surface,
+body[data-spot="deep"] .water-deep {
+  filter: brightness(0.45) saturate(1.3) hue-rotate(15deg);   /* 어두운 심해 */
+}
+
+body[data-spot="deep"] .sky {
+  background: linear-gradient(#0d1330, #2a2f5c);   /* 밤하늘 */
+}
+
+/* 배 탄 낚시꾼 (52×43 그림을 3배로) */
+.fisher {
+  position: absolute;
+  left: 16px;
+  top: 5px;   /* 배가 물 위에 살짝 잠기게 맞춘 위치 */
+}
+
+/* 물속에서 헤엄치는 물고기 */
+#swimmers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.swimmer {
+  position: absolute;
+  left: 0;
+  animation-name: swim-across;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  opacity: 0.9;
+}
+
+/* 오른쪽 → 왼쪽으로 헤엄치는 물고기: 애니메이션을 거꾸로 틀고, 그림을 좌우로 뒤집어요 */
+.swimmer.to-left {
+  animation-direction: reverse;
+  scale: -1 1;
+}
+
+/* 해초: 바닥에서 살랑살랑 */
+.seaweed {
+  position: absolute;
+  bottom: -4px;
+  transform-origin: bottom center;
+  animation: sway 2.4s ease-in-out infinite;
+}
+
+.seaweed-1 { left: 230px; }
+.seaweed-2 { left: 300px; animation-delay: -1.2s; }
+
+/* 물방울: 바닥에서 수면까지 올라가요 */
+.bubble {
+  position: absolute;
+  bottom: 0;
+  opacity: 0;
+  animation: bubble-up 5s linear infinite;
+}
+
+.bubble-1 { left: 60px; }
+.bubble-2 { left: 200px; animation-delay: -1.7s; }
+.bubble-3 { left: 320px; animation-delay: -3.4s; }
+
+/* 잡은 물고기와 +골드가 튀어 오르는 층 */
 #pop-layer {
   position: absolute;
   inset: 0;
-  pointer-events: none;   /* 튀어 오르는 글자가 클릭을 가로막지 않게 */
+  pointer-events: none;   /* 튀어 오르는 그림이 클릭을 가로막지 않게 */
 }
 
-/* 튀어 오르는 이모지/글자 공통 */
 .pop {
   position: absolute;
-  bottom: 50px;
+  bottom: 125px;   /* 수면 높이 */
+  white-space: nowrap;
   animation: pop-up 1.2s ease-out forwards;   /* forwards: 끝난 모습(투명)으로 멈춰 있기 */
 }
 
-.pop-fish {
-  font-size: 30px;
-}
-
 .pop-gold {
-  margin-left: 30px;
+  margin-left: 24px;
   font-size: 15px;
   font-weight: bold;
   color: #ffd23f;
-  text-shadow: 0 0 3px #7a5200, 0 0 3px #7a5200;   /* 어떤 배경에서도 잘 보이게 테두리 */
+  text-shadow: 2px 2px 0 #4a2c00;
+}
+
+.pop-splash {
+  bottom: 120px;
+  animation: splash 0.5s ease-out forwards;
 }
 
 /* 등급이 높을수록 빛나요 */
-.rarity-uncommon  { filter: drop-shadow(0 0 4px #4ccf5e); }
-.rarity-rare      { filter: drop-shadow(0 0 6px #4c8dff); font-size: 36px; }
-.rarity-legendary { filter: drop-shadow(0 0 10px #ffc400); font-size: 46px; }
+.rarity-uncommon  { filter: drop-shadow(0 0 3px #4ccf5e); }
+.rarity-rare      { filter: drop-shadow(0 0 5px #a46bff); }
+.rarity-legendary { filter: drop-shadow(0 0 8px #ffc400); }
 
 /* 장면 연출: JavaScript가 클래스를 붙이는 순간 한 번 재생돼요 */
 .scene.shake {
@@ -124,195 +365,72 @@ body[data-spot="deep"] .scene { background: linear-gradient(#2a2f55 65%, #0b1030
   animation: flash-rare 0.8s;
 }
 
-/* ============================================================
-   위쪽 알림 (전설 물고기, 새 물고기)
-   ============================================================ */
-.banner {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 10px 20px;
-  border-radius: 999px;
-  font-weight: bold;
-  white-space: nowrap;
-  opacity: 0;              /* 평소에는 투명해서 안 보여요 */
-  pointer-events: none;
-  z-index: 10;
+/* ---------- 진행도 막대 ----------
+   테두리 그림(ui_bar_frame)을 늘리고, 안쪽은 초록 막대 그림(ui_bar_fill_green)을 옆으로 이어 붙여요 */
+.bar {
+  height: 12px;
+  border: 6px solid transparent;
+  border-image: url("assets/sprites/ui_bar_frame.png") 2 fill / 6px;
+  image-rendering: pixelated;
 }
 
-.banner.new {
-  background: #ffffff;
-  color: #2a62c9;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+#bar-fill {
+  height: 100%;
+  width: 0%;
+  background: url("assets/sprites/ui_bar_fill_green.png") repeat-x;
+  background-size: 128px 12px;
+  image-rendering: pixelated;
 }
 
-.banner.legendary {
-  background: linear-gradient(90deg, #ffb300, #ffe27a, #ffb300);
-  color: #6b3d00;
-  font-size: 18px;
-  box-shadow: 0 0 24px #ffc400;
+#log {
+  min-height: 22px;
+  margin: 8px 0;
+  font-size: 14px;
+  color: #6b4a2a;
 }
 
-.banner.show {
-  animation: banner-in 2.8s ease-out forwards;
-}
-
-/* ============================================================
-   애니메이션 정의 (@keyframes)
-   0%, 50%, 100%는 "애니메이션 시간 중 몇 % 지점에서 어떤 모습인지"예요.
-   그 사이는 브라우저가 알아서 부드럽게 채워줘요.
-   ============================================================ */
-@keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-4px); }
-}
-
-@keyframes nibble {
-  0%, 100% { transform: translate(0, 0); }
-  25%      { transform: translate(-2px, 2px); }
-  75%      { transform: translate(2px, 3px); }
-}
-
-@keyframes wave {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
-@keyframes pop-up {
-  0%   { transform: translateY(0) scale(0.4); opacity: 0; }
-  20%  { transform: translateY(-25px) scale(1.15); opacity: 1; }
-  70%  { transform: translateY(-45px) scale(1); opacity: 1; }
-  100% { transform: translateY(-60px) scale(1); opacity: 0; }
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  15%      { transform: translateX(-6px) rotate(-1deg); }
-  30%      { transform: translateX(6px) rotate(1deg); }
-  45%      { transform: translateX(-4px); }
-  60%      { transform: translateX(4px); }
-  75%      { transform: translateX(-2px); }
-}
-
-@keyframes flash-rare {
-  0%, 100% { box-shadow: inset 0 0 0 rgba(76, 141, 255, 0); }
-  30%      { box-shadow: inset 0 0 40px rgba(76, 141, 255, 0.9); }
-}
-
-@keyframes banner-in {
-  0%   { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.7); }
-  10%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.08); }
-  18%  { transform: translateX(-50%) scale(1); }
-  80%  { opacity: 1; }
-  100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-}
-
-@keyframes popup-in {
-  from { opacity: 0; transform: scale(0.8); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-/* 낚시터 선택 버튼 줄 */
-#spots {
+/* ---------- 무한의 탑 입구 ---------- */
+.tower-entry {
   display: flex;
-  gap: 6px;
-  margin-top: 16px;
-}
-
-.spot {
-  flex: 1;   /* 세 버튼이 같은 너비로 나눠 가져요 */
-  padding: 8px 4px;
-  border: 2px solid #3a8fd6;
-  border-radius: 10px;
-  background: #f3f9ff;
-  font-size: 13px;
-  white-space: pre-line;   /* 글자 속 줄바꿈(\n)을 그대로 보여줘요 */
-  cursor: pointer;
-}
-
-.spot.active {
-  background: #3a8fd6;
-  color: white;
-  font-weight: bold;
-}
-
-.spot:disabled {
-  border-color: #ccc;
-  background: #f5f5f5;
-  color: #999;
-  cursor: not-allowed;
-}
-
-.spot-name {
-  margin: 16px 0 0;
-  color: #555;
-}
-
-/* 도감: 4칸씩 격자로 */
-#dex {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-
-.dex-cell {
-  display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  padding: 6px 2px;
-  border: 2px solid #ddd;
-  border-radius: 10px;
-  background: #fafafa;
+  padding: 2px 4px;
+  text-align: left;
 }
 
-.dex-emoji {
-  font-size: 24px;
+.tower-entry .small {
+  color: #a9c4ea;
 }
 
-.dex-name {
-  font-size: 12px;
-  font-weight: bold;
+#tower-open {
+  min-width: 96px;
+  height: 46px;
+  font-size: 15px;
 }
 
-.dex-count {
+/* 🧪 테스트 모드 */
+.tower-test {
+  margin-top: 6px;
+  padding: 8px;
+  border: 2px dashed #8a5cf6;
+  font-size: 13px;
+  color: #5b3bb5;
+}
+
+.tower-test input {
+  width: 56px;
+  padding: 2px 4px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.tower-test .small {
+  display: block;
   font-size: 11px;
   color: #888;
 }
 
-.dex-total {
-  font-size: 14px;
-  color: #888;
-  font-weight: normal;
-}
-
-/* 진행도 막대의 바깥 상자 */
-.bar {
-  height: 16px;
-  background: #e3eef7;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-/* 진행도 막대의 안쪽 (JavaScript가 width를 바꿔요) */
-#bar-fill {
-  height: 100%;
-  width: 0%;
-  background: #3a8fd6;
-}
-
-#log {
-  color: #555;
-  min-height: 24px;
-}
-
-h2 {
-  font-size: 18px;
-  margin: 24px 0 8px;
-  text-align: left;
-}
-
-/* 상점 제목 줄: 왼쪽 제목, 오른쪽 "전부 최대로" 버튼 */
+/* ---------- 상점 ---------- */
 .shop-header {
   display: flex;
   justify-content: space-between;
@@ -325,60 +443,92 @@ h2 {
 }
 
 #buy-all {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 999px;
-  background: #ffb300;
-  color: #4a2c00;
-  font-weight: bold;
-  cursor: pointer;
+  height: 42px;
+  font-size: 14px;
 }
 
-#buy-all:disabled {
-  background: #e5e5e5;
-  color: #aaa;
-  cursor: not-allowed;
+#buy-all img {
+  margin-right: 2px;
 }
 
 /* 업그레이드 한 줄: [ 1레벨 사기 버튼 ][ MAX ] */
 .upgrade-row {
   display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.upgrade {
+  display: grid;
+  grid-template-columns: 1fr auto;   /* 왼쪽: 이름+설명, 오른쪽: 가격 */
+  align-items: center;
+  width: 100%;
+  min-height: 52px;
+  margin-bottom: 6px;
+  text-align: left;
+  font-size: 15px;
 }
 
 .upgrade-row .upgrade {
-  margin-bottom: 0;   /* 줄 간격은 바깥 row가 맡아요 */
+  margin-bottom: 0;
+}
+
+.upgrade .name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.upgrade .name img {
+  width: 24px;
+  height: auto;
+}
+
+.upgrade .desc {
+  grid-column: 1;
+  font-size: 12px;
+  font-weight: normal;
+  color: #e2f5e7;
+  text-shadow: 1px 1px 0 #22272e;
+}
+
+.upgrade.pearl .desc {
+  color: #dceaff;
+}
+
+.upgrade:disabled .desc {
+  color: #f0f0f0;
+}
+
+.upgrade .cost {
+  grid-column: 2;
+  grid-row: 1 / 3;   /* 두 줄 높이를 차지해서 세로 가운데에 오게 */
+  font-size: 15px;
+}
+
+/* 골드 가격 앞에 동전 그림 (진주 가격은 글자에 🦪가 들어 있어서 빼요) */
+.upgrade:not(.pearl) .cost::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: -2px;
+  background: url("assets/sprites/coin.png") center / 14px 14px no-repeat;
+  image-rendering: pixelated;
 }
 
 .max-button {
-  width: 56px;
+  width: 64px;
   flex-shrink: 0;           /* 공간이 좁아도 줄어들지 않게 */
-  border: 2px solid #ffb300;
-  border-radius: 10px;
-  background: #fff6dc;
-  color: #7a5200;
   font-size: 12px;
-  font-weight: bold;
   white-space: pre-line;    /* 글자 속 줄바꿈(\n)을 그대로 보여줘요 */
-  cursor: pointer;
 }
 
-.max-button:disabled {
-  border-color: #ccc;
-  background: #f5f5f5;
-  color: #bbb;
-  cursor: not-allowed;
-}
-
-/* ============================================================
-   환생
-   ============================================================ */
+/* ---------- 환생 ---------- */
 .rebirth-box {
-  padding: 12px;
+  padding: 4px 6px;
   margin-bottom: 8px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f3ecff, #e4f4ff);
 }
 
 .rebirth-box p {
@@ -386,194 +536,185 @@ h2 {
 }
 
 .rebirth-box .small {
-  font-size: 13px;
-  color: #666;
+  color: #a9c4ea;
 }
 
 #rebirth-button {
   width: 100%;
+  height: 50px;
   margin: 8px 0 4px;
-  padding: 10px;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(90deg, #8a5cf6, #4c8dff);
-  color: white;
   font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
 }
 
-#rebirth-button:disabled {
-  background: #ddd;
-  color: #999;
-  cursor: not-allowed;
-}
-
-/* 진주 상점 버튼은 보라색 */
-.upgrade.pearl {
-  border-color: #8a5cf6;
-  background: #f7f2ff;
-}
-
-.upgrade.pearl:hover:not(:disabled) {
-  background: #ece2ff;
-}
-
-/* 업그레이드 버튼 하나 */
-.upgrade {
-  display: grid;
-  grid-template-columns: 1fr auto;   /* 왼쪽: 이름+설명, 오른쪽: 가격 */
-  align-items: center;
-  width: 100%;
-  margin-bottom: 8px;
-  padding: 10px 12px;
-  border: 2px solid #3a8fd6;
-  border-radius: 10px;
-  background: #f3f9ff;
-  text-align: left;
+.sub-title {
+  margin: 12px 0 6px;
   font-size: 15px;
-  cursor: pointer;
+  text-align: left;
+  color: #3f6fb5;
 }
 
-.upgrade:hover:not(:disabled) {
-  background: #dcefff;
+/* ---------- 도감 ---------- */
+#dex {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
 }
 
-/* 골드가 모자라서 못 사는 상태 */
-.upgrade:disabled {
-  border-color: #ccc;
-  background: #f5f5f5;
-  color: #999;
-  cursor: not-allowed;
+/* 등급별 슬롯 그림 (흔함=회색, 보통=파랑, 희귀=보라, 전설=금색). 3픽셀 테두리를 2배로 */
+.dex-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 78px;
+  border: 6px solid transparent;
+  border-image: url("assets/sprites/ui_slot_common.png") 3 fill / 6px;
+  image-rendering: pixelated;
+  color: #e8f1ff;
 }
 
-.upgrade .name {
+.dex-cell.slot-uncommon  { border-image-source: url("assets/sprites/ui_slot_rare.png"); }
+.dex-cell.slot-rare      { border-image-source: url("assets/sprites/ui_slot_epic.png"); }
+.dex-cell.slot-legendary { border-image-source: url("assets/sprites/ui_slot_legend.png"); }
+
+/* 못 잡은 물고기: 회색 슬롯 + 자물쇠만 보여요 */
+.dex-cell.unknown {
+  border-image-source: url("assets/sprites/ui_slot_common.png");
+}
+
+.dex-picture {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+}
+
+.dex-picture img:first-child {
+  max-width: 72px;   /* 칼처럼 긴 물고기도 칸에 들어가게 */
+  height: auto;
+}
+
+/* 잡은 물고기는 자물쇠를 숨기고, 못 잡은 물고기는 물고기 그림을 숨겨요 */
+.dex-cell:not(.unknown) .dex-picture img:last-child,
+.dex-cell.unknown .dex-picture img:first-child {
+  display: none;
+}
+
+.dex-name {
+  font-size: 12px;
   font-weight: bold;
 }
 
-.upgrade .desc {
-  grid-column: 1;
-  font-size: 13px;
-  color: #666;
+.dex-count {
+  font-size: 11px;
+  color: #a9c4ea;
 }
 
-/* 오프라인 보상 창: 화면 전체를 어둡게 덮고 가운데에 상자를 띄워요 */
+.dex-total {
+  font-size: 14px;
+  color: #7a5530;
+  font-weight: normal;
+}
+
+/* ---------- 아래쪽 ---------- */
+footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  font-size: 12px;
+  color: #7a5530;
+}
+
+#reset {
+  border: none;
+  background: none;
+  color: #b33a2e;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ============================================================
+   위쪽 알림 (전설 물고기, 새 물고기)
+   ============================================================ */
+.banner {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border: 4px solid #22272e;
+  font-weight: bold;
+  white-space: nowrap;
+  opacity: 0;              /* 평소에는 투명해서 안 보여요 */
+  pointer-events: none;
+  z-index: 10;
+}
+
+.banner.new {
+  background: #f1e0b8;
+  color: #2e1a0a;
+  box-shadow: 4px 4px 0 #22272e;
+}
+
+.banner.legendary {
+  background: linear-gradient(90deg, #ffb300, #ffe27a, #ffb300);
+  color: #4a2c00;
+  font-size: 18px;
+  box-shadow: 4px 4px 0 #22272e, 0 0 24px #ffc400;
+}
+
+.banner.show {
+  animation: banner-in 2.8s ease-out forwards;
+}
+
+/* ============================================================
+   창 (오프라인 보상, 무한의 탑)
+   ============================================================ */
 .popup {
   position: fixed;
   inset: 0;   /* 화면 네 귀퉁이에 딱 붙이기 */
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.popup.hidden {
-  display: none;
+  background: rgba(8, 14, 28, 0.7);
+  z-index: 5;
 }
 
 .popup-box {
-  animation: popup-in 0.3s ease-out;   /* 살짝 커지면서 등장 */
   width: 300px;
-  padding: 24px;
-  background: white;
-  border-radius: 16px;
+  padding: 12px;
   text-align: center;
+  animation: popup-in 0.3s ease-out;   /* 살짝 커지면서 등장 */
 }
 
 .popup-box h2 {
-  text-align: center;
-  margin-top: 0;
+  justify-content: center;
+  margin-top: 8px;
 }
 
 .popup-box p {
   line-height: 1.6;
 }
 
-#offline-ok {
-  padding: 10px 32px;
-  border: none;
-  border-radius: 10px;
-  background: #3a8fd6;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  font-size: 13px;
-  color: #888;
-}
-
-#reset {
-  border: none;
-  background: none;
-  color: #c44;
-  font-size: 13px;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.upgrade .cost {
-  grid-column: 2;
-  grid-row: 1 / 3;   /* 두 줄 높이를 차지해서 세로 가운데에 오게 */
-  font-weight: bold;
+#offline-ok,
+#tower-close {
+  width: 100%;
+  height: 52px;
+  font-size: 18px;
 }
 
 /* ============================================================
    무한의 탑
    ============================================================ */
-
-/* 본편 화면의 입구 카드 */
-.tower-entry {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  margin-top: 12px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #2b2f5c, #4b3d8f);
-  color: white;
-  text-align: left;
-}
-
-.tower-entry .small {
-  font-size: 13px;
-  opacity: 0.8;
-}
-
-#tower-open {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 999px;
-  background: #ffd23f;
-  color: #4a2c00;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-#tower-open:disabled {
-  background: #777;
-  color: #ccc;
-  cursor: not-allowed;
-}
-
-/* 탑 창 */
 .tower-box {
   width: 340px;
-  border: 3px solid transparent;
 }
 
 .tower-box.boss {
-  border-color: #ffc400;
-  box-shadow: 0 0 30px #ffc400;
-}
-
-.hidden {
-  display: none;
+  filter: drop-shadow(0 0 16px #ffc400);
 }
 
 .tower-top {
@@ -587,20 +728,23 @@ footer {
 #tower-quit {
   border: none;
   background: none;
-  color: #c44;
+  color: #b33a2e;
+  font-family: inherit;
   text-decoration: underline;
   cursor: pointer;
 }
 
 .tower-fish {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 110px;
   margin-top: 8px;
-  font-size: 64px;
   animation: swim 1.2s ease-in-out infinite;   /* 물고기가 좌우로 몸부림 */
 }
 
-.tower-box.boss .tower-fish {
-  font-size: 80px;
-  filter: drop-shadow(0 0 10px #ffc400);
+.tower-box.boss .tower-fish img {
+  filter: drop-shadow(0 0 8px #ffc400);
 }
 
 .tower-fish.hurt {
@@ -612,69 +756,53 @@ footer {
   margin-bottom: 8px;
 }
 
-/* 물고기 체력 막대 */
+/* 물고기 체력 막대: 진행도 막대와 같은 테두리, 안쪽은 빨간색 */
 .hp-bar {
   height: 12px;
-  background: #f3dede;
-  border-radius: 6px;
-  overflow: hidden;
+  border: 6px solid transparent;
+  border-image: url("assets/sprites/ui_bar_frame.png") 2 fill / 6px;
+  image-rendering: pixelated;
 }
 
 #tower-hp-fill {
   height: 100%;
-  background: #e0484a;
+  background: linear-gradient(#ff8a7a 0 33%, #d9483b 33%);   /* 위 1/3은 밝게: 픽셀 막대 느낌 */
   transition: width 0.2s;   /* 체력이 줄 때 부드럽게 */
 }
 
 .tower-box .small {
-  font-size: 12px;
-  color: #888;
   margin: 4px 0;
+  color: #7a5530;
 }
 
 .tension {
   margin: 8px 0 16px;
-  color: #c44;
+  color: #b33a2e;
   letter-spacing: 2px;
 }
 
 /* 캐치 막대 */
 .catch-bar {
   position: relative;
-  height: 32px;
-  border-radius: 8px;
-  background: #e3eef7;
+  height: 28px;
+  border: 6px solid transparent;
+  border-image: url("assets/sprites/ui_bar_frame.png") 2 fill / 6px;
+  image-rendering: pixelated;
 }
 
 #catch-zone {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: #ffd23f;
-  border-radius: 4px;
+  background: linear-gradient(#ffe27a 0 30%, #f5b81c 30%);
   box-shadow: 0 0 8px #ffc400;
 }
 
-/* 왕복하는 찌: 세로 막대 + 위쪽 빨간 공 */
+/* 왕복하는 찌 그림 */
 #catch-pointer {
   position: absolute;
-  top: -6px;
-  bottom: -6px;
-  width: 4px;
-  margin-left: -2px;   /* 막대의 가운데가 정확한 위치에 오게 */
-  background: #e0484a;
-  border-radius: 2px;
-}
-
-#catch-pointer::before {
-  content: "";
-  position: absolute;
-  top: -8px;
-  left: -5px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #e0484a;
+  top: -12px;
+  margin-left: -7px;   /* 찌 그림의 가운데가 정확한 위치에 오게 */
 }
 
 .catch-bar.hit {
@@ -685,76 +813,39 @@ footer {
   animation: bar-miss 0.4s;
 }
 
-#catch-button,
-#tower-close {
+#catch-button {
   width: 100%;
+  height: 58px;
   margin-top: 16px;
-  padding: 14px;
-  border: none;
-  border-radius: 12px;
-  background: #3a8fd6;
-  color: white;
   font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-#catch-button:active {
-  transform: scale(0.97);   /* 누르는 느낌 */
 }
 
 #tower-message {
   min-height: 20px;
   font-size: 14px;
-  color: #555;
+  color: #6b4a2a;
 }
 
 #tower-result-text {
   line-height: 1.6;
 }
 
-@keyframes swim {
-  0%, 100% { transform: rotate(-8deg); }
-  50%      { transform: rotate(8deg) translateX(6px); }
-}
-
-@keyframes hurt {
-  0%   { transform: scale(1); filter: brightness(1); }
-  30%  { transform: scale(0.85); filter: brightness(2) drop-shadow(0 0 8px red); }
-  100% { transform: scale(1); filter: brightness(1); }
-}
-
-@keyframes bar-hit {
-  0%, 100% { box-shadow: 0 0 0 rgba(76, 207, 94, 0); }
-  30%      { box-shadow: 0 0 20px rgba(76, 207, 94, 1); }
-}
-
-@keyframes bar-miss {
-  0%, 100% { transform: translateX(0); background: #e3eef7; }
-  25%      { transform: translateX(-6px); background: #f7c9c9; }
-  75%      { transform: translateX(6px); }
-}
-
-/* ============================================================
-   무한의 탑: 보스 폭주
-   ============================================================ */
+/* ---------- 보스 폭주 ---------- */
 .tower-box.raging {
-  border-color: #ff4d3d;
   animation: rage-glow 0.8s ease-in-out infinite;
 }
 
 .shield {
   margin: -8px 0 12px;
-  color: #2a7fff;
+  color: #3f6fb5;
   font-weight: bold;
   letter-spacing: 2px;
 }
 
-/* 폭주 경기장 */
 .rage-arena {
   position: relative;
   height: 180px;
-  border-radius: 12px;
+  border: 4px solid #22272e;
   background: radial-gradient(circle, #4a1414, #140505);
   overflow: hidden;
 }
@@ -766,24 +857,23 @@ footer {
   top: 50%;
   transform: translate(-50%, -50%);   /* 좌표가 물고기 "가운데"를 가리키게 */
   transition: left 0.35s ease-out, top 0.35s ease-out;
-  font-size: 40px;
 }
 
-#rage-fish-emoji {
+#rage-fish-img {
   display: block;
   animation: swim 0.5s ease-in-out infinite;   /* 폭주 중이라 빠르게 몸부림 */
   filter: drop-shadow(0 0 8px #ff4d3d);
 }
 
-/* 파란 보호막 원 (기준 크기) */
+/* 파란 보호막 원 (기준 크기)과 줄어드는 노란 원 */
 .ring-target,
 .ring-approach {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 70px;
-  height: 70px;
-  margin: -35px 0 0 -35px;   /* 원의 가운데를 물고기 가운데에 맞춰요 */
+  width: 80px;
+  height: 80px;
+  margin: -40px 0 0 -40px;   /* 원의 가운데를 물고기 가운데에 맞춰요 */
   border-radius: 50%;
   pointer-events: none;
 }
@@ -794,7 +884,7 @@ footer {
   box-shadow: 0 0 12px rgba(90, 170, 255, 0.9);
 }
 
-/* 줄어드는 노란 원: JavaScript가 transform: scale(3 → 0.5)로 크기를 바꿔요 */
+/* JavaScript가 transform: scale(3 → 0.5)로 크기를 바꿔요 */
 .ring-approach {
   border: 3px solid #ffd23f;
   opacity: 0;
@@ -812,15 +902,105 @@ footer {
   animation: rage-miss 0.4s;
 }
 
-@keyframes rage-miss {
+/* ============================================================
+   애니메이션 정의 (@keyframes)
+   0%, 50%, 100%는 "애니메이션 시간 중 몇 % 지점에서 어떤 모습인지"예요.
+   그 사이는 브라우저가 알아서 부드럽게 채워줘요.
+   ============================================================ */
+
+/* 물결: 타일 한 칸(48px)만큼 옆으로 밀면 처음과 똑같아 보여서, 끊김 없이 반복돼요 */
+@keyframes water-flow {
+  from { background-position-x: 0; }
+  to   { background-position-x: 48px; }
+}
+
+/* 물 표면 그림 2장을 번갈아 보여줘요. steps(1)은 "부드럽게 섞지 말고 딱 바꾸기" */
+@keyframes water-frames {
+  0%   { background-image: url("assets/sprites/water_tile_0.png"); }
+  50%  { background-image: url("assets/sprites/water_tile_1.png"); }
+}
+
+@keyframes swim-across {
+  from { left: -80px; }
+  to   { left: 400px; }
+}
+
+@keyframes sway {
+  0%, 100% { transform: skewX(-6deg); }
+  50%      { transform: skewX(6deg); }
+}
+
+@keyframes bubble-up {
+  0%   { transform: translateY(0); opacity: 0; }
+  10%  { opacity: 0.8; }
+  80%  { opacity: 0.8; }
+  100% { transform: translateY(-115px); opacity: 0; }
+}
+
+@keyframes pop-up {
+  0%   { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
+  20%  { transform: translate(-50%, -30px) scale(1.15); opacity: 1; }
+  70%  { transform: translate(-50%, -55px) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -75px) scale(1); opacity: 0; }
+}
+
+@keyframes splash {
+  0%   { transform: translate(-50%, 0) scale(0.6); opacity: 1; }
+  100% { transform: translate(-50%, -6px) scale(1.3); opacity: 0; }
+}
+
+@keyframes shake {
   0%, 100% { transform: translateX(0); }
-  25%      { transform: translateX(-6px); }
+  15%      { transform: translateX(-6px); }
+  30%      { transform: translateX(6px); }
+  45%      { transform: translateX(-4px); }
+  60%      { transform: translateX(4px); }
+  75%      { transform: translateX(-2px); }
+}
+
+@keyframes flash-rare {
+  0%, 100% { box-shadow: inset 0 0 0 rgba(164, 107, 255, 0); }
+  30%      { box-shadow: inset 0 0 40px rgba(164, 107, 255, 0.9); }
+}
+
+@keyframes banner-in {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.7); }
+  10%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.08); }
+  18%  { transform: translateX(-50%) scale(1); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+}
+
+@keyframes popup-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes swim {
+  0%, 100% { transform: rotate(-8deg); }
+  50%      { transform: rotate(8deg) translateX(6px); }
+}
+
+@keyframes hurt {
+  0%   { transform: scale(1); filter: brightness(1); }
+  30%  { transform: scale(0.85); filter: brightness(2) drop-shadow(0 0 8px red); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes bar-hit {
+  0%, 100% { filter: brightness(1); }
+  30%      { filter: brightness(1.6) drop-shadow(0 0 8px #4ccf5e); }
+}
+
+@keyframes bar-miss {
+  0%, 100% { transform: translateX(0); filter: none; }
+  25%      { transform: translateX(-6px); filter: sepia(1) hue-rotate(-50deg) saturate(4); }
   75%      { transform: translateX(6px); }
 }
 
 @keyframes rage-glow {
-  0%, 100% { box-shadow: 0 0 16px #ff4d3d; }
-  50%      { box-shadow: 0 0 40px #ff4d3d; }
+  0%, 100% { filter: drop-shadow(0 0 8px #ff4d3d); }
+  50%      { filter: drop-shadow(0 0 24px #ff4d3d); }
 }
 
 @keyframes shield-crack {
@@ -834,32 +1014,8 @@ footer {
   30%      { filter: brightness(1.8); }
 }
 
-/* 🧪 테스트 모드 */
-.tower-test {
-  margin-top: 6px;
-  padding: 8px;
-  border: 2px dashed #8a5cf6;
-  border-radius: 10px;
-  font-size: 13px;
-  color: #5b3bb5;
-}
-
-.tower-test input {
-  width: 56px;
-  padding: 2px 4px;
-  font-size: 14px;
-}
-
-.tower-test .small {
-  display: block;
-  font-size: 11px;
-  color: #888;
-}
-
-/* 진주 상점 안의 작은 제목 ("🗼 탑 강화") */
-.sub-title {
-  margin: 12px 0 6px;
-  font-size: 15px;
-  text-align: left;
-  color: #5b3bb5;
+@keyframes rage-miss {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-6px); }
+  75%      { transform: translateX(6px); }
 }

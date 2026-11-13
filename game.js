@@ -13,32 +13,35 @@ const RARITIES = {
 };
 
 // 낚시터와 그곳에서 잡히는 물고기
+//   sprite: assets/sprites/ 안의 그림 이름
+//   emoji: 글자 메시지(알림, 기록)에 쓰는 이모지
+//   ※ id는 세이브(도감)에 쓰이니까 이름이 바뀌어도 그대로 둬요
 const SPOTS = [
   {
     id: "lake", emoji: "🏞️", name: "호수", unlockCost: 0,
     fish: [
-      { id: "crucian",  emoji: "🐟", name: "붕어",      rarity: "common",    price: 1 },
-      { id: "carp",     emoji: "🐠", name: "잉어",      rarity: "uncommon",  price: 3 },
-      { id: "turtle",   emoji: "🐢", name: "자라",      rarity: "rare",      price: 10 },
-      { id: "goldcarp", emoji: "🐉", name: "황금 잉어", rarity: "legendary", price: 60 },
+      { id: "crucian",  emoji: "🐟", name: "붕어",      sprite: "fish_crucian",     rarity: "common",    price: 1 },
+      { id: "carp",     emoji: "🐟", name: "잉어",      sprite: "fish_carp",        rarity: "uncommon",  price: 3 },
+      { id: "turtle",   emoji: "🎏", name: "비단잉어",  sprite: "fish_koi",         rarity: "rare",      price: 10 },
+      { id: "goldcarp", emoji: "🌟", name: "황금 잉어", sprite: "fish_legend_gold", rarity: "legendary", price: 60 },
     ],
   },
   {
     id: "sea", emoji: "🌊", name: "바다", unlockCost: 100000,
     fish: [
-      { id: "mackerel", emoji: "🐟", name: "고등어",   rarity: "common",    price: 8 },
-      { id: "crab",     emoji: "🦀", name: "대게",     rarity: "uncommon",  price: 25 },
-      { id: "octopus",  emoji: "🐙", name: "문어",     rarity: "rare",      price: 80 },
-      { id: "shark",    emoji: "🦈", name: "백상아리", rarity: "legendary", price: 500 },
+      { id: "mackerel", emoji: "🐟", name: "고등어",   sprite: "fish_mackerel", rarity: "common",    price: 8 },
+      { id: "crab",     emoji: "🦀", name: "대게",     sprite: "crab",          rarity: "uncommon",  price: 25 },
+      { id: "octopus",  emoji: "🐙", name: "문어",     sprite: "octopus",       rarity: "rare",      price: 80 },
+      { id: "shark",    emoji: "🦈", name: "백상아리", sprite: "fish_shark",    rarity: "legendary", price: 500 },
     ],
   },
   {
     id: "deep", emoji: "🌌", name: "심해", unlockCost: 20000000,
     fish: [
-      { id: "shrimp",   emoji: "🦐", name: "심해 새우", rarity: "common",    price: 60 },
-      { id: "angler",   emoji: "🐡", name: "아귀",      rarity: "uncommon",  price: 180 },
-      { id: "nautilus", emoji: "🐚", name: "앵무조개",  rarity: "rare",      price: 600 },
-      { id: "kraken",   emoji: "🦑", name: "크라켄",    rarity: "legendary", price: 4000 },
+      { id: "shrimp",   emoji: "👻", name: "유령 해파리",   sprite: "jellyfish",           rarity: "common",    price: 60 },
+      { id: "angler",   emoji: "🐡", name: "아귀",          sprite: "fish_abyss",          rarity: "uncommon",  price: 180 },
+      { id: "nautilus", emoji: "🐍", name: "심해 장어",     sprite: "fish_eel",            rarity: "rare",      price: 600 },
+      { id: "kraken",   emoji: "🌈", name: "오로라 물고기", sprite: "fish_legend_rainbow", rarity: "legendary", price: 4000 },
     ],
   },
 ];
@@ -47,8 +50,8 @@ const SPOTS = [
 //    baseCost: 처음 가격 / growth: 살 때마다 가격이 몇 배가 되는지
 //    (밸런스: 가상 플레이어 시뮬레이션 기준 바다 약 15분, 심해 약 2시간에 열리도록 맞춘 값)
 const UPGRADES = [
-  { id: "bait", emoji: "🪱", name: "미끼",   desc: "물고기 가격 +50%",        baseCost: 10,  growth: 1.4 },
-  { id: "rod",  emoji: "🎣", name: "낚싯대", desc: "낚시 속도 +20%",          baseCost: 15,  growth: 1.4 },
+  { id: "bait", emoji: "🪱", sprite: "bait_worm", name: "미끼",   desc: "물고기 가격 +50%",        baseCost: 10,  growth: 1.4 },
+  { id: "rod",  emoji: "🎣", sprite: "rod",       name: "낚싯대", desc: "낚시 속도 +20%",          baseCost: 15,  growth: 1.4 },
   { id: "crew", emoji: "🧑‍✈️", name: "선원",   desc: "한 번에 잡는 물고기 +1", baseCost: 100, growth: 2.5 },
 ];
 
@@ -312,15 +315,25 @@ function playAnimation(element, className) {
   element.classList.add(className);
 }
 
-// 낚시 장면 위로 글자(이모지)가 튀어 올랐다 사라지게 해요
-function spawnPop(text, className) {
+// 낚시 장면 위로 그림이나 글자가 튀어 올랐다 사라지게 해요
+//   content: 글자(문자열) 또는 그림 같은 화면 요소
+// 찌 위치(왼쪽에서 약 140px)에서 튀어 오르게 해요. 낚시꾼 그림 안에서 찌가 있는 자리예요.
+//   낚시꾼 그림 왼쪽 위치 16px + 그림 속 찌 위치 41픽셀 × 3배 ≈ 140px
+const BOBBER_X = 140;
+let lastBigCatchAt = 0;   // 희귀 이상을 마지막으로 잡은 시각 (낚시꾼이 물고기를 들어 올리는 연출용)
+
+function spawnPop(content, className) {
   if (popLayer.childElementCount > 20) {
     return;   // 탭을 오래 내려뒀다 돌아오면 한꺼번에 수십 개가 생길 수 있어서 개수 제한
   }
   const pop = document.createElement("span");
   pop.className = "pop " + className;
-  pop.textContent = text;
-  pop.style.left = (50 + Math.random() * 30) + "%";   // 찌 근처에서 조금씩 다른 위치
+  if (typeof content === "string") {
+    pop.textContent = content;
+  } else {
+    pop.append(content);
+  }
+  pop.style.left = (BOBBER_X + Math.random() * 30 - 15) + "px";   // 찌 근처에서 조금씩 다른 위치
   popLayer.appendChild(pop);
   // 애니메이션이 끝나면 스스로 지워져요 (안 지우면 화면에 계속 쌓여요)
   pop.addEventListener("animationend", () => pop.remove());
@@ -373,7 +386,7 @@ const fishCountText = document.getElementById("fish-count");
 const gpsText = document.getElementById("gps");
 const spotNameText = document.getElementById("spot-name");
 const scene = document.getElementById("scene");
-const bobber = document.getElementById("bobber");
+const fisherImg = document.getElementById("fisher");
 const popLayer = document.getElementById("pop-layer");
 const banner = document.getElementById("banner");
 const barFill = document.getElementById("bar-fill");
@@ -418,8 +431,16 @@ function catchFish() {
   const others = count > 1 ? ` 외 ${count - 1}마리` : "";
 
   // 연출: 제일 좋은 물고기와 번 골드가 물 위로 튀어 올라요
-  spawnPop(best.emoji, "pop-fish rarity-" + best.rarity);
-  spawnPop("+" + formatNumber(totalGold), "pop-gold");
+  spawnPop(makeSprite("splash", 3), "pop-splash");                    // 물보라
+  spawnPop(makeFishSprite(best, 3), "pop-fish rarity-" + best.rarity); // 잡은 물고기 그림
+
+  const goldPop = document.createElement("span");                    // 동전 그림 + 숫자
+  goldPop.append(makeSprite("coin", 1), " +" + formatNumber(totalGold));
+  spawnPop(goldPop, "pop-gold");
+
+  if (best.rarity === "rare" || best.rarity === "legendary") {
+    lastBigCatchAt = Date.now();   // 낚시꾼이 번쩍 들어 올리는 그림으로 바뀌어요
+  }
 
   if (best.rarity === "legendary") {
     showBanner(`🌟 전설의 물고기! ${best.emoji} ${best.name} 🌟`, "legendary");
@@ -642,6 +663,12 @@ for (const upgrade of UPGRADES) {
   const button = document.createElement("button");
   button.className = "upgrade";
   const name = makeSpan("name");
+  // 그림이 있는 업그레이드는 이름 앞에 픽셀 아이콘을 붙여요
+  if (upgrade.sprite) {
+    name.append(makeSprite(upgrade.sprite, 1));
+  }
+  const label = makeSpan("label");   // "미끼 Lv.3" 글자가 들어갈 칸 (render에서 바꿔요)
+  name.append(label);
   const desc = makeSpan("desc");
   desc.textContent = upgrade.desc;
   const cost = makeSpan("cost");
@@ -658,7 +685,7 @@ for (const upgrade of UPGRADES) {
   row.className = "upgrade-row";
   row.append(button, maxButton);
   document.getElementById("shop").appendChild(row);
-  shopButtons[upgrade.id] = { button, name, cost, maxButton };
+  shopButtons[upgrade.id] = { button, label, cost, maxButton };
 }
 
 document.getElementById("buy-all").addEventListener("click", buyAllMax);
@@ -698,12 +725,45 @@ const dexCells = {};
 for (const fish of ALL_FISH) {
   const cell = document.createElement("div");
   cell.className = "dex-cell";
-  const emoji = makeSpan("dex-emoji");
+  // 등급마다 다른 슬롯 테두리 (흔함=회색, 보통=파랑, 희귀=보라, 전설=금색)
+  cell.classList.add("slot-" + fish.rarity);
+  const picture = makeSpan("dex-picture");
+  picture.append(makeFishSprite(fish, 2));
+  picture.append(makeSprite("icon_lock", 3));   // 못 잡은 물고기는 그림 대신 자물쇠가 보여요
   const name = makeSpan("dex-name");
   const count = makeSpan("dex-count");
-  cell.append(emoji, name, count);
+  cell.append(picture, name, count);
   document.getElementById("dex").appendChild(cell);
-  dexCells[fish.id] = { cell, emoji, name, count };
+  dexCells[fish.id] = { cell, name, count };
+}
+
+// 물속에서 헤엄치는 물고기 (장식)
+//   지금 낚시터의 물고기를 등급 확률대로 3마리 뽑아서, 왼쪽↔오른쪽으로 헤엄치게 해요.
+//   한 번 화면을 다 건너가면(animationiteration) 새 물고기로 바뀌어요.
+const swimmersBox = document.getElementById("swimmers");
+let swimmersSpot = null;   // 지금 헤엄치는 물고기들이 어느 낚시터 물고기인지
+
+function setupSwimmer(img) {
+  const fish = rollFish(getCurrentSpot());
+  setFishSprite(img, fish, 2);
+  img.style.top = (125 + Math.random() * 70) + "px";             // 물속 아무 깊이
+  img.style.animationDuration = (8 + Math.random() * 8) + "s";   // 8~16초에 한 번 건너가요
+  // 절반은 오른쪽 → 왼쪽으로 (그림을 좌우로 뒤집고, 애니메이션을 거꾸로 재생)
+  img.classList.toggle("to-left", Math.random() < 0.5);
+}
+
+function refreshSwimmers() {
+  swimmersSpot = state.spot;
+  swimmersBox.innerHTML = "";
+  for (let i = 0; i < 3; i++) {
+    const img = makeSprite("fish_crucian", 2);
+    img.classList.add("swimmer");
+    setupSwimmer(img);
+    // 처음부터 화면 중간쯤에 있도록, 애니메이션을 미리 몇 초 진행시켜 둬요 (음수 지연)
+    img.style.animationDelay = (-Math.random() * 8) + "s";
+    img.addEventListener("animationiteration", () => setupSwimmer(img));
+    swimmersBox.appendChild(img);
+  }
 }
 
 // ============================================================
@@ -722,15 +782,37 @@ function render() {
   // 낚시터마다 배경 색을 바꿔요. body에 data-spot="sea" 같은 표시를 붙이면 CSS가 알아서 색을 골라요.
   document.body.dataset.spot = state.spot;
 
-  // 곧 물고기가 잡힐 때(진행도 80% 이상) 찌가 파르르 떨려요
-  bobber.classList.toggle("bite", state.progress > 0.8);
+  // 낚시꾼 그림 바꾸기 (프레임 애니메이션)
+  //   여러 장의 그림을 빠르게 바꿔 보여주면 움직이는 것처럼 보여요. 만화 영화와 같은 원리예요.
+  //   - 희귀 이상을 잡은 직후 0.8초: 물고기를 번쩍 들어 올려요 (catch)
+  //   - 진행도 90% 이상: 릴을 감아요. 그림 3장을 0.12초마다 돌려요 (reel_0 → 1 → 2)
+  //   - 진행도 70% 이상: 입질! 찌가 물속으로 당겨지고 머리 위에 느낌표 (bite)
+  //   - 평소: 그림 2장을 0.6초마다 번갈아서 배가 살짝 출렁여요 (idle_0, idle_1)
+  const now = Date.now();
+  let frame;
+  if (now - lastBigCatchAt < 800) {
+    frame = "fisher_catch";
+  } else if (state.progress > 0.9) {
+    frame = "fisher_reel_" + (Math.floor(now / 120) % 3);
+  } else if (state.progress > 0.7) {
+    frame = "fisher_bite";
+  } else {
+    frame = "fisher_idle_" + (Math.floor(now / 600) % 2);
+  }
+  setSprite(fisherImg, frame, 3);
+
+  // 낚시터가 바뀌면 물속 물고기도 그 낚시터 물고기로 바꿔요
+  if (swimmersSpot !== state.spot) {
+    refreshSwimmers();
+  }
 
   // 상점
   for (const upgrade of UPGRADES) {
     const ui = shopButtons[upgrade.id];
     const cost = getCost(upgrade);
-    ui.name.textContent = `${upgrade.emoji} ${upgrade.name} Lv.${state.levels[upgrade.id]}`;
-    ui.cost.textContent = `💰 ${formatNumber(cost)}`;
+    const icon = upgrade.sprite ? "" : upgrade.emoji + " ";   // 그림이 없으면 이모지로
+    ui.label.textContent = `${icon}${upgrade.name} Lv.${state.levels[upgrade.id]}`;
+    ui.cost.textContent = formatNumber(cost);
     ui.button.disabled = state.gold < cost;   // 돈이 모자라면 버튼을 회색으로 잠가요
 
     const maxCount = getMaxBuyCount(upgrade);
@@ -773,9 +855,11 @@ function render() {
       button.textContent = `${spot.emoji} ${spot.name}`;
       button.disabled = false;
     } else {
-      button.textContent = `🔒 ${spot.name}\n💰${formatNumber(spot.unlockCost)}`;   // \n = 줄바꿈
+      // 자물쇠 아이콘은 CSS(.spot.locked)가 붙여줘요
+      button.textContent = `${spot.name}\n💰${formatNumber(spot.unlockCost)}`;   // \n = 줄바꿈
       button.disabled = state.gold < spot.unlockCost;
     }
+    button.classList.toggle("locked", !unlocked);
     button.classList.toggle("active", spot.id === state.spot);   // 지금 있는 곳은 강조
   }
 
@@ -786,12 +870,12 @@ function render() {
     const caught = state.dex[fish.id] || 0;
     if (caught > 0) {
       found += 1;
-      ui.emoji.textContent = fish.emoji;
+      ui.cell.classList.remove("unknown");
       ui.name.textContent = fish.name;
       ui.count.textContent = `${formatNumber(caught)}마리`;
       ui.cell.style.borderColor = RARITIES[fish.rarity].color;
     } else {
-      ui.emoji.textContent = "❓";
+      ui.cell.classList.add("unknown");   // 아직 못 잡은 물고기는 자물쇠로 가려요
       ui.name.textContent = "???";
       ui.count.textContent = "";
       ui.cell.style.borderColor = "";

@@ -115,7 +115,8 @@ const catchZone = document.getElementById("catch-zone");
 const catchPointer = document.getElementById("catch-pointer");
 const rageArena = document.getElementById("rage-arena");
 const rageFish = document.getElementById("rage-fish");
-const rageFishEmoji = document.getElementById("rage-fish-emoji");
+const towerFishImg = document.getElementById("tower-fish-img");
+const rageFishImg = document.getElementById("rage-fish-img");
 const ringApproach = document.getElementById("ring-approach");
 const shieldText = document.getElementById("tower-shield");
 
@@ -348,7 +349,7 @@ function registerMiss(text) {
 function startRage() {
   setMode("rage");
   run.shield = run.info.shield;
-  rageFishEmoji.textContent = run.info.fish.emoji;
+  setFishSprite(rageFishImg, run.info.fish, 3);
   showBanner(`🔥 ${run.info.fish.name} 폭주! 보호막이 생겼어요`, "legendary");
   towerMessage.textContent = "줄어드는 노란 원이 파란 보호막에 겹칠 때 누르세요!";
   run.frozenUntil = performance.now() + 900;
@@ -457,7 +458,7 @@ function endRun(reason) {
 function renderTower() {
   const info = run.info;
   document.getElementById("tower-floor").textContent = `🗼 ${info.floor}층${info.isBoss ? " 👑" : ""}`;
-  towerFish.textContent = info.fish.emoji;
+  setFishSprite(towerFishImg, info.fish, info.isBoss ? 5 : 4);   // 보스는 더 크게
   document.getElementById("tower-fish-name").textContent =
     info.fish.name + (run.mode === "rage" ? " 🔥폭주🔥" : "");
   document.getElementById("tower-hp-fill").style.width = (run.hp / info.hp * 100) + "%";

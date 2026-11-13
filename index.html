@@ -4,36 +4,48 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>방치 낚시</title>
+  <!-- 픽셀 글꼴(갈무리). 인터넷에서 못 불러오면 기본 글꼴로 보여요 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css">
   <!-- 꾸미기(디자인)는 style.css 파일에 따로 적어요 -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="game">
-    <h1>🎣 방치 낚시</h1>
+  <!-- class="pixel"은 픽셀아트를 흐릿하지 않게 늘려주는 표시예요 (style.css 참고)
+       class="panel-wood", "panel-dark"는 나무/남색 테두리 그림을 늘려 붙인 상자예요 -->
+  <main class="game panel-wood">
+    <h1>방치 낚시</h1>
 
     <!-- id는 JavaScript가 이 요소를 찾을 때 쓰는 "이름표"예요 -->
     <div class="stats">
-      <p>💰 골드: <span id="gold">0</span></p>
-      <p>🐟 잡은 물고기: <span id="fish-count">0</span>마리</p>
-      <p class="small">⏱️ 초당 골드: <span id="gps">0</span></p>
+      <p><img class="pixel" src="assets/sprites/coin.png" width="28" height="28" alt=""> <span id="gold">0</span></p>
+      <p><img class="pixel" src="assets/sprites/bucket.png" width="28" height="26" alt=""> <span id="fish-count">0</span>마리</p>
+      <p class="small">초당 <span id="gps">0</span> 골드</p>
     </div>
 
     <!-- 낚시터 선택: 버튼은 game.js가 SPOTS 목록을 보고 만들어요 -->
     <div id="spots"></div>
 
-    <p class="spot-name">📍 <span id="spot-name"></span></p>
-
-    <!-- 낚시 장면: 안에 있는 것들을 CSS로 "겹쳐서" 배치해요 -->
+    <!-- 낚시 장면: 안에 있는 것들을 CSS로 "겹쳐서" 배치해요 (뒤에 쓴 것이 앞에 보여요) -->
     <div id="scene" class="scene">
-      <span class="fisher-man">🧑‍🦰🎣</span>
-      <span id="bobber" class="bobber">🔴</span>
-      <!-- 물결: 똑같은 내용을 두 번 이어 붙여서, 왼쪽으로 흘려보내며 무한 반복해요 -->
-      <div class="water">〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️</div>
-      <!-- 잡은 물고기와 +골드 글자가 여기서 튀어 올라요 -->
+      <div class="sky"><span id="spot-name" class="spot-name"></span></div>
+      <!-- 물 표면(거품 줄)과 깊은 물(무늬)을 따로 깔아요 -->
+      <div class="water-deep"></div>
+      <div class="water-surface"></div>
+      <!-- 물속에서 헤엄치는 물고기들 (game.js가 넣어요) -->
+      <div id="swimmers"></div>
+      <!-- 해초와 물방울 -->
+      <img class="pixel seaweed seaweed-1" src="assets/sprites/seaweed_0.png" width="30" height="54" alt="">
+      <img class="pixel seaweed seaweed-2" src="assets/sprites/seaweed_1.png" width="30" height="54" alt="">
+      <img class="pixel bubble bubble-1" src="assets/sprites/bubble.png" width="14" height="14" alt="">
+      <img class="pixel bubble bubble-2" src="assets/sprites/bubble.png" width="14" height="14" alt="">
+      <img class="pixel bubble bubble-3" src="assets/sprites/bubble.png" width="14" height="14" alt="">
+      <!-- 배 탄 낚시꾼: game.js가 그림을 바꿔가며 움직이게 해요 -->
+      <img id="fisher" class="pixel fisher" src="assets/sprites/fisher_idle_0.png" width="156" height="129" alt="">
+      <!-- 잡은 물고기와 +골드가 여기서 튀어 올라요 -->
       <div id="pop-layer"></div>
     </div>
 
-    <!-- 낚시 진행도 막대: 바깥 상자 안에서 안쪽 막대의 너비가 0% → 100%로 늘어나요 -->
+    <!-- 낚시 진행도 막대: 바깥 테두리 안에서 안쪽 막대의 너비가 0% → 100%로 늘어나요 -->
     <div class="bar">
       <div id="bar-fill"></div>
     </div>
@@ -41,13 +53,13 @@
     <p id="log">낚싯대를 던졌어요...</p>
 
     <!-- 무한의 탑 입구 -->
-    <div class="tower-entry">
+    <div class="tower-entry panel-dark">
       <div>
         <b>🗼 무한의 탑</b><br>
         <span class="small">최고 <span id="tower-best">0</span>층 · 수입 +<span id="tower-bonus">0</span>%</span><br>
         <span class="small">🚩 다음 시작 <span id="tower-start">1</span>층</span>
       </div>
-      <button id="tower-open">도전</button>
+      <button id="tower-open" class="btn btn-gold">도전</button>
     </div>
     <!-- 🧪 테스트 모드(주소 뒤에 ?test)일 때만 보여요 -->
     <div id="tower-test" class="tower-test hidden">
@@ -58,25 +70,27 @@
 
     <!-- 상점: 버튼은 game.js가 UPGRADES 목록을 보고 자동으로 만들어 넣어요 -->
     <div class="shop-header">
-      <h2>🛒 상점</h2>
-      <button id="buy-all">⚡ 전부 최대로</button>
+      <h2><img class="pixel" src="assets/sprites/icon_shop.png" width="26" height="24" alt=""> 상점</h2>
+      <button id="buy-all" class="btn btn-gold">
+        <img class="pixel" src="assets/sprites/icon_upgrade.png" width="22" height="20" alt=""> 전부 최대로
+      </button>
     </div>
     <div id="shop"></div>
 
     <!-- 환생: 진주를 받고 처음부터. 진주 상점 버튼은 game.js가 만들어요 -->
-    <h2>🦪 환생</h2>
-    <div class="rebirth-box">
+    <h2><img class="pixel" src="assets/sprites/gem.png" width="26" height="22" alt=""> 환생</h2>
+    <div class="rebirth-box panel-dark">
       <p>보유 진주 <b id="pearls">0</b>개 · 환생 <span id="rebirths">0</span>회</p>
       <p class="small">📖 도감 보너스: 물고기 가격 +<span id="dex-bonus">0</span>% (1종당 +5%)</p>
-      <button id="rebirth-button">🔄 환생하기</button>
+      <button id="rebirth-button" class="btn btn-gold">🔄 환생하기</button>
       <p class="small" id="rebirth-hint"></p>
     </div>
     <div id="pearl-shop"></div>
     <h3 class="sub-title">🗼 탑 강화 (진주)</h3>
     <div id="pearl-tower-shop"></div>
 
-    <!-- 도감: 잡은 적 없는 물고기는 ❓로 가려져 있어요 -->
-    <h2>📖 도감 <span id="dex-count" class="dex-total"></span></h2>
+    <!-- 도감: 잡은 적 없는 물고기는 자물쇠로 가려져 있어요 -->
+    <h2><img class="pixel" src="assets/sprites/icon_book.png" width="28" height="18" alt=""> 도감 <span id="dex-count" class="dex-total"></span></h2>
     <div id="dex"></div>
 
     <footer>
@@ -90,22 +104,23 @@
 
   <!-- 오프라인 보상 창: 평소에는 hidden으로 숨겨두고, 보상이 있을 때만 보여줘요 -->
   <div id="offline-popup" class="popup hidden">
-    <div class="popup-box">
-      <h2>🌙 다시 오셨네요!</h2>
+    <div class="popup-box panel-wood">
+      <img class="pixel" src="assets/sprites/chest.png" width="72" height="44" alt="">
+      <h2>다시 오셨네요!</h2>
       <p id="offline-text"></p>
-      <button id="offline-ok">받기</button>
+      <button id="offline-ok" class="btn btn-green">받기</button>
     </div>
   </div>
 
   <!-- 무한의 탑 창 -->
   <div id="tower" class="popup hidden">
-    <div id="tower-box" class="popup-box tower-box">
+    <div id="tower-box" class="popup-box tower-box panel-wood">
       <div id="tower-play">
         <div class="tower-top">
           <span id="tower-floor">🗼 1층</span>
           <button id="tower-quit">포기</button>
         </div>
-        <div id="tower-fish" class="tower-fish">🐟</div>
+        <div id="tower-fish" class="tower-fish"><img id="tower-fish-img" class="pixel" alt=""></div>
         <div id="tower-fish-name" class="tower-fish-name"></div>
         <div class="hp-bar"><div id="tower-hp-fill"></div></div>
         <div id="tower-hp-text" class="small"></div>
@@ -115,7 +130,7 @@
         <!-- 보스 폭주 경기장: 보스가 돌아다니고, 노란 원이 파란 보호막 원으로 줄어들어요 -->
         <div id="rage-arena" class="rage-arena hidden">
           <div id="rage-fish" class="rage-fish">
-            <span id="rage-fish-emoji">🐉</span>
+            <img id="rage-fish-img" class="pixel" alt="">
             <div class="ring-target"></div>
             <div id="ring-approach" class="ring-approach"></div>
           </div>
@@ -124,22 +139,25 @@
         <!-- 캐치 막대: 노란 구간(catch-zone)과 왕복하는 찌(catch-pointer) -->
         <div id="catch-bar" class="catch-bar">
           <div id="catch-zone"></div>
-          <div id="catch-pointer"></div>
+          <!-- 찌 그림이 막대 위를 왕복해요 -->
+          <div id="catch-pointer"><img class="pixel" src="assets/sprites/bobber.png" width="14" height="26" alt=""></div>
         </div>
 
-        <button id="catch-button">🎣 낚아채기! <small>(스페이스바)</small></button>
+        <button id="catch-button" class="btn btn-green">🎣 낚아채기! <small>(스페이스바)</small></button>
         <p id="tower-message"></p>
       </div>
 
       <div id="tower-result" class="hidden">
         <h2>🗼 도전 종료</h2>
         <p id="tower-result-text"></p>
-        <button id="tower-close">닫기</button>
+        <button id="tower-close" class="btn btn-blue">닫기</button>
       </div>
     </div>
   </div>
 
   <!-- 게임 동작은 game.js에 있어요. 화면(HTML)을 다 읽은 뒤에 실행되도록 맨 아래에 둬요 -->
+  <!-- 그림 도우미(sprites.js)는 game.js가 쓰니까 먼저 불러와요 -->
+  <script src="sprites.js"></script>
   <script src="game.js"></script>
   <!-- 무한의 탑은 game.js의 함수들을 쓰기 때문에 그 다음에 불러와요 -->
   <script src="tower.js"></script>
